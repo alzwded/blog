@@ -2,4 +2,9 @@ theme: minima
 title: alzwded's blog
 author: Vlad Meșco
 description: blogging about tech stuff
-markdown: GFM
+markdown: kramdown
+kramdown:
+    input: GFM
+header_pages:
+    - about.md
+    - contact.md
