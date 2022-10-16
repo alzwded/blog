@@ -174,14 +174,14 @@ Argh. `echo 'gem "webrick"' >> Gemfile ; bundle30`.
 
 Finally!
 
-![screenshot of browser displaying this page]({{ "/assets/images/2022-10-16-jekyll-in-links.png" }})
+![screenshot of browser displaying this page](../../../assets/images/2022-10-16-jekyll-in-links.png)
 
 It turns out:
 - this local jekyll really wants that frontmatter thing
   + index.md needs `home`
   + posts need `post`
   + pages need `page`
-- assets have to be in `project_root/assets`
+- assets have to be in `$project_root/docs/assets` to work in both github and local
 - jekyll should probably be run with `bundle30 exec jekyll30 server --drafts`
 - I now have gems randomly installed in `/usr` and in the project dir; this is a problem for future me, because building some of the native dependencies takes forever on this ancient laptop
 - this took a whole lot more time than I would have expected. I had picked github pages because it's easy!
