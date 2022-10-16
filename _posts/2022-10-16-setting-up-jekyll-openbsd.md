@@ -109,6 +109,39 @@ bundle30
 
 Many compiles later...
 
+```csh
+blog> jekyll30 --serve drafts
+Configuration file: /home/jakkal/Projects/blog/_config.yml
+            Source: /home/jakkal/Projects/blog
+       Destination: /home/jakkal/Projects/blog/_site
+ Incremental build: disabled. Enable with --incremental
+      Generating... 
+       Jekyll Feed: Generating feed for posts
+Markdown processor: "GFM" is not a valid Markdown processor.
+                    Available processors are: kramdown
+...
+```
+
+Okay, fine:
+
+```diff
+--- _config.yml.orig    Sun Oct 16 22:54:24 2022
++++ _config.yml Sun Oct 16 22:42:00 2022
+@@ -2,7 +2,9 @@
+ title: alzwded's blog
+ author: Vlad Meșco
+ description: blogging about tech stuff
+-markdown: GFM
++markdown: kramdown
++kramdown:
++    input: GFM
+ header_pages:
+     - about.md
+     - contact.md
+```
+
+Now it's happy. Or is it?...
+
 ```
 > jekyll30 serve --drafts
 ...
@@ -151,3 +184,4 @@ It turns out:
 - assets have to be in `project_root/assets`
 - jekyll should probably be run with `bundle30 exec jekyll30 server --drafts`
 - I now have gems randomly installed in `/usr` and in the project dir; this is a problem for future me, because building some of the native dependencies takes forever on this ancient laptop
+- this took a whole lot more time than I would have expected. I had picked github pages because it's easy!
