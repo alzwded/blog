@@ -2,3 +2,4 @@ theme: minima
 title: alzwded's blog
 author: Vlad Meșco
 description: blogging about tech stuff
+markdown: GFM
