@@ -74,7 +74,7 @@ pkg_add cscope
 apt install cscope
 ```
 
-`cscope` comes in and provides its own search tools, and the features I mostly use are "who calls this", "where is this text string", "where is this regex", "where is this macro defined". `cscope` actually runs as a background process and Vim talks to it.
+`cscope` comes in and provides its own search tools, and the features I mostly use are "who calls this", "where is this text string", "where is this regex", "where is this macro defined".
 
 ```sh
 cscope -bqR
@@ -82,7 +82,7 @@ cscope -bqR -s../include -s../drv          # additional include dirs
 cscope -bqR -u                             # force update the database
 ```
 
-`cscope` isn't as neatly integrated into Vim, but it's good enough.
+`cscope` isn't as neatly integrated into Vim, but it's good enough. `cscope` actually runs as a background process and Vim drives it.
 
 Use `:cs add cscope.out` to enable.
 
