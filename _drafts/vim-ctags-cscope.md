@@ -1,9 +1,25 @@
-intro -- least effort, maximum productivity
+My philosophy has always been to maximize productivity with minimal effort. I think this is why I prefer Vim over Emacs :smile:.
+Find a tool that works, stick with it, that's what I do. I haven't distro hopped in 10 years and I've been using vim as my text 
+editor and tcsh as my login shell for more than 10 years. If it ain't broken, don't fix it!
 
-find a tool that works, stick with it; I haven't distro hopped in 10 years and I've been using vim as my text editor and tcsh as my login shell for more than 10 years. If it ain't broken, don't fix it :-)
+My job has me working on dinosaur code bases where running `grep` to find stuff isn't exactly the most practical thing to do. 
+Some of the tools I've integrated into my environment over the years are `ctags` and `cscope`, which, while requiring me
+to learn a couple of new tricks, did increase the speed at which I can comprehend what is going on across hundreds of SOs and
+thousands of files of C and/or C++. There's just too much code to memorize anything, every day is a fresh new start.
+
+So let's see how `ctags` and `cscope` work with Vim.
 
 ctags
 -----
+
+You need to have some sort of `ctags` package installed. E.g.
+
+```sh
+pkg_add ectags
+pkg_add universal-ctags
+apt install exuberant-ctags
+...
+```
 
 vim comes (or used to come?) with exuberant ctags, which has some nice additions, like somewhat decent C++ support, plus a whole bunch of features related to local symbols, who calls what, etc.
 If exuberant ctags isn't available, there's universal ctags, which is mostly CLI compatible (though it might complain that some `--c-kinds` are not available). That's fine, it
@@ -48,7 +64,14 @@ cscope
 
 sometimes ctags isn't enough; for example, there are many projects that provide helpful macros to help devs define or use stuff, and that confuses C parsers.
 
-`cscope` comes in and provides its own search tools, and the features I mostly use are "who calls this", "where is this text string", "where is this regex", "where is this macro defined".
+Again, you need `cscope` installed, e.g.
+
+```sh
+pkg_add cscope
+apt install cscope
+```
+
+`cscope` comes in and provides its own search tools, and the features I mostly use are "who calls this", "where is this text string", "where is this regex", "where is this macro defined". `cscope` actually runs as a background process and Vim talks to it.
 
 ```sh
 cscope -bqR
@@ -73,7 +96,7 @@ I don't believe `cscope` works well with C++, but since I mostly use it as a com
 Conclusion
 ----------
 
-Vim is a powerful IDE, but we knew that already.
+Vim is a powerful IDE, but we knew that already. Especially when you pair `ctags` and `cscope` with the somewhat recent `:Termdebug` feature which makes Vim be a front-end to `gdb`; now, while debugging, if you stumble over a macro like `LIBPATH`, you can jump to it to see what it was compiled as :smile:.
 
 The thing is, you can use these tools without Vim. `cscope` in particular has a menu drive text interface (one of the `b` or `q` flags disables this). You can use them
 with any text editor / IDE.
