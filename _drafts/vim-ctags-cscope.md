@@ -1,11 +1,14 @@
+---
+layout: post
+title: "Using ctags and cscope in Vim"
+---
 My philosophy has always been to maximize productivity with minimal effort. I think this is why I prefer Vim over Emacs :smile:.
 Find a tool that works, stick with it, that's what I do. I haven't distro hopped in 10 years and I've been using vim as my text 
 editor and tcsh as my login shell for more than 10 years. If it ain't broken, don't fix it!
 
 My job has me working on dinosaur code bases where running `grep` to find stuff isn't exactly the most practical thing to do. 
 Some of the tools I've integrated into my environment over the years are `ctags` and `cscope`, which, while requiring me
-to learn a couple of new tricks, did increase the speed at which I can comprehend what is going on across hundreds of SOs and
-thousands of files of C and/or C++. There's just too much code to memorize anything, every day is a fresh new start.
+to learn a couple of new tricks, do make the *archaeologia cōdicis* phase go a lot faster.
 
 So let's see how `ctags` and `cscope` work with Vim.
 
@@ -21,11 +24,12 @@ apt install exuberant-ctags
 ...
 ```
 
-vim comes (or used to come?) with exuberant ctags, which has some nice additions, like somewhat decent C++ support, plus a whole bunch of features related to local symbols, who calls what, etc.
-If exuberant ctags isn't available, there's universal ctags, which is mostly CLI compatible (though it might complain that some `--c-kinds` are not available). That's fine, it
-mostly does what I mean. The much older UNIX-y `ctags` is still floating around, that one doesn't do much. It can still be useful if it's all you got; it supports basically no flags.
+*Note: Once a package is installed, the actual binary name may vary. Replace `ctags` in the shell invocations below with the actual binary name of the thing you have installed.*
 
-ctags invocation -- for a lot of people, running `ctags .` is enough. But I like having a giant database for an entire source tree (sometimes for multiple source trees if
+Vim used to ship with exuberant ctags, which has somewhat decent C++ support, plus a whole bunch of features related to local symbols, who calls what, etc.
+If exuberant ctags isn't available, there's universal ctags, which is mostly CLI compatible (though it might complain that some `--c-kinds` are not available). The much older UNIX-y `ctags` is still floating around, that one doesn't do much. It can still be useful if it's all you got; it supports basically no flags.
+
+For a lot of people, running `ctags .` is enough. But I like having a giant database for an entire source tree (sometimes for multiple source trees if
 I'm working on a tool that uses some library). I invoke it like this:
 
 ```sh
@@ -40,8 +44,7 @@ ctags --extra=+fq --fields=+amnStail --c-kinds=+cdefglpx --c++-kinds=+lpx -f tag
 ctags -f tags --tag-relative=yes --fields=+a+f+i+k+l+m+n+s+S+z+t --extra=+f+q --c-kinds=+c+d+e+f+g+l+m+n+p+s+t+u+v+x --c++-kinds=+c+d+e+f+g+l+m+n+p+s+t+u+v+x -R .
 ```
 
-I remember going through the man page and picking everything that I might ever find interesting. I may have enabled all flags, I don't remember.
-
+I remember going through the exuberant ctags man page and picking everything that I might ever find interesting. I may have enabled all flags, I don't remember.
 
 Vim
 ---
@@ -102,7 +105,7 @@ The thing is, you can use these tools without Vim. `cscope` in particular has a 
 with any text editor / IDE.
 
 The provide a massive amount of value on large or old or complicated projects/products. And they are considerably faster than running `grep` repeatedly, or trying
-to guess where everything should be. Keep them handy.
+to guess where everything should be. There's just the initial setup time that can be annoying, but it usually finishes by the time you grab some coffee; and if the code base is large enough, `ctags` should have more than enough time to finish while the product builds :smile:. Keep these tools handy.
 
 There is at least one more tool, GNU GLOBAL, but I haven't had fun with that one, so I never use it. Visual Studio Code also tries to do similar things to `ctags`
-and `cscope`, and it mostly works, but who wants to run a text editor that eats up as much RAM as Chrome does?
+and `cscope`, and it mostly works, but who wants to run a text editor that eats up as much RAM as Chrome does? And, even though I never checked, I'm willing to wager someone wrote a cool clang-\* thing that does the same thing as these two tools, but I'm too lazy to check (or to change my ways).
