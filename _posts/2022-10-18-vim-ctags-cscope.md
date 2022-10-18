@@ -24,7 +24,7 @@ apt install exuberant-ctags
 ...
 ```
 
-*Note: Once a package is installed, the actual binary name may vary. Replace `ctags` in the shell invocations below with the actual binary name of the thing you have installed.*
+*Note: Once a package is installed, the actual binary name may vary. Replace `ctags` in the shell invocations below with the actual binary name of the thing you have installed. In my case, I run *`ectags`* which is the exubernat ctags implementation.*
 
 Vim used to ship with exuberant ctags, which has somewhat decent C++ support, plus a whole bunch of features related to local symbols, who calls what, etc.
 If exuberant ctags isn't available, there's universal ctags, which is mostly CLI compatible (though it might complain that some `--c-kinds` are not available). The much older UNIX-y `ctags` is still floating around, that one doesn't do much. It can still be useful if it's all you got; it supports basically no flags.
@@ -59,6 +59,8 @@ I prefer to have a giant database with an entire source tree, so I tend to `set 
 The magical command you need to remember is `:ts` (tag-select). There's a shortcut `g]` which takes the string under the cursor and passes it to `:ts`. It then
 brings up a menu with all the matches.
 
+![using ctags to find where a function is implemented](../../../assets/images/ctags-ts-Dfix.png)
+
 And if you weren't aware, `^O` and `^I` are Vim's *back* and *forward* buttons (like a web browser). I recall ctags support in Vim having a concept of a tag stack , but that's
 one of the many features I don't use :smile:. I just stick with ol' reliable `^O`. Just go see `:help tags` and `:help tagsrch.txt`, there's a lot of functionality there...
 
@@ -88,7 +90,15 @@ Use `:cs add cscope.out` to enable.
 
 Use `:cs` to show the help.
 
-Then, you can use `:cs f g symbol`, `:cs f d who_calls_this`, `:cs f t text` and so on.
+![cscope showing its help](../../../assets/images/cscope-cs.png)
+
+Then, you can use `:cs f g symbol`, `:cs f c who_calls_this`, `:cs f t text` and so on.
+
+![cs f c Dfix](../../../assets/images/cscope-f-c-Dfix.png)
+![cs f c Dfix](../../../assets/images/cscope-f-c-Dfix-result.png)
+
+![cs f t __OpenBSD__](../../../assets/images/cscope-cs-f-t-openbsd.png)
+![cs f t __OpenBSD__](../../../assets/images/cscope-cs-f-t-openbsd-result.png)
 
 If you want to pass a complicated and long symbol name, and you don't want to type it (I usually don't), you can use Vim registers to hold it. 
 Interactively, yank the thing in a register (e.g. `"qye` or visual select + `"qy` etc), then type `:cs f t ^Rq`. You can automate e.g. in visual mode
@@ -101,8 +111,12 @@ Conclusion
 
 Vim is a powerful IDE, but we knew that already. Especially when you pair `ctags` and `cscope` with the somewhat recent `:Termdebug` feature which makes Vim be a front-end to `gdb`; now, while debugging, if you stumble over a macro like `LIBPATH`, you can jump to it to see what it was compiled as :smile:.
 
+![I couldn't get :Termdebug to work on OpenBSD, but I did get :terminal to work; here's looking for a tag](../../../assets/images/ctags-while-debugging.png)
+
 The thing is, you can use these tools without Vim. `cscope` in particular has a menu drive text interface (one of the `b` or `q` flags disables this). You can use them
 with any text editor / IDE.
+
+![cscope run standalone](../../../assets/images/cscope-terminal.png)
 
 The provide a massive amount of value on large or old or complicated projects/products. And they are considerably faster than running `grep` repeatedly, or trying
 to guess where everything should be. There's just the initial setup time that can be annoying, but it usually finishes by the time you grab some coffee; and if the code base is large enough, `ctags` should have more than enough time to finish while the product builds :smile:. Keep these tools handy.
