@@ -1,5 +1,5 @@
 ---
 layout: home
-title: "alzwded'd blog"
+title: "alzwded's blog"
 ---
 Welcome!
