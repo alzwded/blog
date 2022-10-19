@@ -390,3 +390,35 @@ super-block backups (for fsck -b #) at:
  160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
  3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
  7050400, 7465120, 7879840, 8294560,
+
+
+
+
+
+
+shhhhhhhhhooooot I forgot the /usr/src parittion (sd2i); TODO start over
+
+and do these changes
+OpenBSD area: 64-234441647; size: 234441583; free: 31
+#                size           offset  fstype [fsize bsize   cpg]
+  a:          2097152               64  4.2BSD   2048 16384     1 # /
+  b:          2599568          2097216    swap                    
+  c:        234441647                0  unused                    
+  d:          8388576          4696800  4.2BSD   2048 16384     1 # /tmp
+  e:         12539168         13085376  4.2BSD   2048 16384     1 # /var
+  f:         12582912         25624544  4.2BSD   2048 16384     1 # /usr
+  g:          2097152         38207456  4.2BSD   2048 16384     1 # /usr/X11R6
+  h:         33889696         40304608  4.2BSD   2048 16384     1 # /usr/local
+  i:          6291456         74194304  4.2BSD   2048 16384     1 # /usr/src
+  j:         12582912         80485760  4.2BSD   2048 16384     1 # /usr/obj
+  k:        141372960         93068672  4.2BSD   2048 16384     1 # /home
+
+
+/var e 4194304                      2GiB
+/usr/local 33554432                 16GiB
+/home ~147664416                    ~70GiB
+
+this is a note for me, not for the blog
+set /etc/mk.conf
+WRKOBJDIR=/usr/obj/ports
+chown jakkal /usr/obj/ports
