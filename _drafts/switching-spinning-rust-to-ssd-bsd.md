@@ -534,7 +534,7 @@ Here's a table:
 
 | Disk            | Sequential read | sequential write  | random read   | random rw                     |
 |:---------------:|-----------------|-------------------|---------------|-------------------------------|
-| **spinny disk** | 10.3 MB/s       | 30.3 MB/s         | 483 KB/s      | 257 KB/s read, 280 KB/s write |
+| **spinny disk** | 10.3 MB/s       | 30.3 MB/s         | 483 KB/s      | 257-479 KB/s read, 280-482 KB/s write |
 | **ssd**		  |					|					|				|                               |
 
 ### Before
@@ -696,6 +696,56 @@ randrw: (groupid=0, jobs=2): err= 0: pid=1888610348: Wed Oct 19 21:41:06 2022
 Run status group 0 (all jobs):
    READ: bw=257KiB/s (263kB/s), 257KiB/s-257KiB/s (263kB/s-263kB/s), io=60.2MiB (63.1MB), run=240020-240020msec
   WRITE: bw=260KiB/s (266kB/s), 260KiB/s-260KiB/s (266kB/s-266kB/s), io=60.9MiB (63.9MB), run=240020-240020msec
+```
+
+I figured I may as well try `iodepth=64` and it didn't seem to stick. But I did get better results the second time.
+
+```
+doas fio --name=randrw --iodepth=64 --rw=randrw --bs=4k --direct=0 --size=128M --numjobs=2 --runtime=240 --group_reporting
+randrw: (g=0): rw=randrw, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=64
+...
+fio-3.26
+Starting 2 threads
+Jobs: 1 (f=1): [m(1),_(1)][72.2%][r=728KiB/s,w=800KiB/s][r=182,w=200 IOPS][eta 01m:33s]  
+randrw: (groupid=0, jobs=2): err= 0: pid=1735393836: Wed Oct 19 22:00:06 2022
+  read: IOPS=117, BW=468KiB/s (479kB/s)(110MiB/240074msec)
+    clat (usec): min=22, max=7388.8k, avg=5958.35, stdev=54733.25
+     lat (usec): min=28, max=7388.8k, avg=5964.81, stdev=54733.33
+    clat percentiles (usec):
+     |  1.00th=[    25],  5.00th=[    26], 10.00th=[    28], 20.00th=[    34],
+     | 30.00th=[    35], 40.00th=[    35], 50.00th=[    36], 60.00th=[    37],
+     | 70.00th=[    38], 80.00th=[    44], 90.00th=[ 13960], 95.00th=[ 23725],
+     | 99.00th=[ 89654], 99.50th=[274727], 99.90th=[463471], 99.95th=[549454],
+     | 99.99th=[834667]
+   bw (  KiB/s): min=   16, max= 4889, per=100.00%, avg=859.73, stdev=406.90, samples=620
+   iops        : min=    4, max= 1221, avg=214.77, stdev=101.65, samples=620
+  write: IOPS=117, BW=471KiB/s (482kB/s)(110MiB/240074msec); 0 zone resets
+    clat (usec): min=27, max=8351.6k, avg=6755.65, stdev=77544.85
+     lat (usec): min=34, max=8351.6k, avg=6762.72, stdev=77544.93
+    clat percentiles (usec):
+     |  1.00th=[     35],  5.00th=[     39], 10.00th=[     42],
+     | 20.00th=[     45], 30.00th=[     47], 40.00th=[     48],
+     | 50.00th=[     50], 60.00th=[     57], 70.00th=[     65],
+     | 80.00th=[     74], 90.00th=[  14353], 95.00th=[  23987],
+     | 99.00th=[  93848], 99.50th=[ 308282], 99.90th=[ 492831],
+     | 99.95th=[ 599786], 99.99th=[4664067]
+   bw (  KiB/s): min=   16, max= 4969, per=100.00%, avg=860.65, stdev=400.65, samples=633
+   iops        : min=    4, max= 1241, avg=214.99, stdev=100.09, samples=633
+  lat (usec)   : 50=66.68%, 100=16.92%, 250=0.41%, 500=0.14%, 750=0.06%
+  lat (usec)   : 1000=0.01%
+  lat (msec)   : 2=0.01%, 4=0.12%, 10=2.72%, 20=6.20%, 50=5.20%
+  lat (msec)   : 100=0.64%, 250=0.30%, 500=0.51%, 750=0.07%, 1000=0.01%
+  lat (msec)   : 2000=0.01%, >=2000=0.01%
+  cpu          : usr=0.39%, sys=1.05%, ctx=9246, majf=0, minf=7
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=28091,28255,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=64
+
+Run status group 0 (all jobs):
+   READ: bw=468KiB/s (479kB/s), 468KiB/s-468KiB/s (479kB/s-479kB/s), io=110MiB (115MB), run=240074-240074msec
+  WRITE: bw=471KiB/s (482kB/s), 471KiB/s-471KiB/s (482kB/s-482kB/s), io=110MiB (116MB), run=240074-240074msec
 ```
 
 ### After
