@@ -1,5 +1,5 @@
+```
 ~> doas fdisk sd0
-doas (jakkal@jakkal-mini.my.domain) password: 
 Disk: sd0       geometry: 19457/255/63 [312581808 Sectors]
 Offset: 0       Signature: 0xAA55
             Starting         Ending         LBA Info:
@@ -9,8 +9,10 @@ Offset: 0       Signature: 0xAA55
  1: 00      0   0   0 -      0   0   0 [           0:           0 ] unused      
  2: 00      0   0   0 -      0   0   0 [           0:           0 ] unused      
 *3: A6      0   1   2 -  19457  80  63 [          64:   312581744 ] OpenBSD
+```
 
 
+```
 ~> doas fdisk sd2
 Disk: sd2       geometry: 14593/255/63 [234441647 Sectors]
 Offset: 0       Signature: 0xAA55
@@ -21,19 +23,20 @@ Offset: 0       Signature: 0xAA55
  1: 00      0   0   0 -      0   0   0 [           0:           0 ] unused      
  2: 00      0   0   0 -      0   0   0 [           0:           0 ] unused      
 *3: A6      0   1   2 -  14593  80  62 [          64:   234441583 ] OpenBSD  
+```
 
 
-
+```
 doas fdisk -i sd2
 y
+```
 
 
 
 
 
-fdisk
-*3: A6      0   1   2 -  14593  80  62 [          64:   234441583 ] OpenBSD
 
+```
 disklabel sd0
 # /dev/rsd0c:
 type: SCSI
@@ -63,8 +66,10 @@ drivedata: 0
   i:          6291456         82247904  4.2BSD   2048 16384 12960 # /usr/src
   j:         12582912         88539360  4.2BSD   2048 16384 12960 # /usr/obj
   k:        211459520        101122272  4.2BSD   2048 16384 12960 # /home
+```
 
 
+```
 disklabel sd2
 16 partitions:
 #                size           offset  fstype [fsize bsize   cpg]
@@ -81,16 +86,37 @@ Filesystem     Size    Used   Avail Capacity  Mounted on
 /dev/sd0j      5.8G    241M    5.3G     4%    /usr/obj
 /dev/sd0i      2.9G    1.8G   1014M    64%    /usr/src
 /dev/sd0e      5.8G   32.3M    5.5G     1%    /var
+```
 
 
+The numbers `disklabel(8)` shows are sector counts, and a sector
+is 512 bytes (because diskabel said so, though in my experience,
+drive firmware almost always reports 512).
+
+```
 dc 2k GB 2 1024 1024 * * * p       => blocks
 dc 2k BLOCKS 2 / 1024 / 1024 / p   => GB
-make /var sd2e smaller, 2GB, or 4194304
+```
 
+We can even alias this in tcsh
+
+```
+> alias GBtoS 'echo "5k \!:1 2 1024 1024 * * * p" | dc'
+> alias StoGB 'echo "5k \!:1 2 / 1024 / 1024 / p" | dc'
+> GBtoS 1
+2097152
+> StoGB 2097152
+1.00000
+```
+
+I wouldn't stick that in my user's rc, but it's handy while we're figuring out these counts. The trick is to divide/multiply by 2 and ignore the last 6 digits.
 
 
 
 let's try automatic mode
+
+```
+disklabel -E sd2
 sd2> A
 sd2*> p
 OpenBSD area: 64-234441647; size: 234441583; free: 31
@@ -106,68 +132,86 @@ OpenBSD area: 64-234441647; size: 234441583; free: 31
   i:          6291456         74194304  4.2BSD   2048 16384     1 # /usr/src
   j:         12582912         80485760  4.2BSD   2048 16384     1 # /usr/obj
   k:        141372960         93068672  4.2BSD   2048 16384     1 # /home
+```
 
-DO NOT LIKE
+Close, but let's say I do not like that. I think I'll round down /var to 4GB and /usr/local to 16GB. That should give me almost 2 gigs for /home. I could also decide I want to consolidate `a`, `f` and `g` and sum up their sizes into a single big a partition.
 
 delete everything with `z`
 
 
-sd2*> z
+```
+disklabel -E sd2
+Label editor (enter '?' for help at any prompt)
+sd2> z
+sd2*> w
+sd2> p
+OpenBSD area: 64-234441647; size: 234441583; free: 234441583
+#                size           offset  fstype [fsize bsize   cpg]
+  c:        234441647                0  unused
 sd2> a a
 offset: [64] 
 size: [234441583] 2097152
 FS type: [4.2BSD] 
 sd2*> a b
 offset: [2097216] 
-size: [232344431] 2599656
+size: [232344431] 2599568
 FS type: [swap] swap
 sd2*> a d
-offset: [4696872] 
-size: [229744775] 8388576
+offset: [4696784] 
+size: [229744863] 8388576
 FS type: [4.2BSD] 
 sd2*> a e
-offset: [13085440] 
-size: [221356207] 8388608
+offset: [13085344] 
+size: [221356303] 8388608
 FS type: [4.2BSD] 
 sd2*> a f
-offset: [21474048] 
-size: [212967599] 12582912
+offset: [21473952] 12582912
+'f' aligned offset 12582912 lies outside the OpenBSD bounds or inside another partition
+sd2*> a f
+offset: [21473952] 
+size: [212967695] 12582912
 FS type: [4.2BSD] 
 sd2*> a g
-offset: [34056960] 
-size: [200384687] 2097152
+offset: [34056864] 
+size: [200384783] 2097152
 FS type: [4.2BSD] 
 sd2*> a h
-offset: [36154112] 
-size: [198287535] 33554432
+offset: [36154016] 
+size: [198287631] 33554432
+FS type: [4.2BSD] 
+sd2*> a i
+offset: [69708448] 
+size: [164733199] 6291456
 FS type: [4.2BSD] 
 sd2*> a j
-offset: [69708544] 
-size: [164733103] 12582912
+offset: [75999904] 
+size: [158441743] 12582912
 FS type: [4.2BSD] 
 sd2*> a k
-offset: [82291456] 
-size: [152150191] 
-FS type: [4.2BSD]
-sd2*> 2
-sd2> p
-OpenBSD area: 64-234441647; size: 234441583; free: 39
+offset: [88582816] 
+size: [145858831] 
+FS type: [4.2BSD] 
+sd2*> p
+OpenBSD area: 64-234441647; size: 234441583; free: 31
 #                size           offset  fstype [fsize bsize   cpg]
   a:          2097152               64  4.2BSD   2048 16384     1 
-  b:          2599656          2097216    swap                    
+  b:          2599568          2097216    swap                    
   c:        234441647                0  unused                    
-  d:          8388544          4696896  4.2BSD   2048 16384     1 
-  e:          8388608         13085440  4.2BSD   2048 16384     1 
-  f:         12582912         21474048  4.2BSD   2048 16384     1 
-  g:          2097152         34056960  4.2BSD   2048 16384     1 
-  h:         33554432         36154112  4.2BSD   2048 16384     1 
-  j:         12582912         69708544  4.2BSD   2048 16384     1 
-  k:        152150176         82291456  4.2BSD   2048 16384     1 
+  d:          8388544          4696800  4.2BSD   2048 16384     1 
+  e:          8388608         13085344  4.2BSD   2048 16384     1 
+  f:         12582912         21473952  4.2BSD   2048 16384     1 
+  g:          2097152         34056864  4.2BSD   2048 16384     1 
+  h:         33554432         36154016  4.2BSD   2048 16384     1 
+  i:          6291456         69708448  4.2BSD   2048 16384     1 
+  j:         12582912         75999904  4.2BSD   2048 16384     1 
+  k:        145858816         88582816  4.2BSD   2048 16384     1 
+sd2*> w
+```
 
 
 
-
-~> doas disklabel sd2
+```
+doas disklabel sd2
 # /dev/rsd2c:
 type: SCSI
 disk: SCSI disk
@@ -187,43 +231,48 @@ drivedata: 0
 16 partitions:
 #                size           offset  fstype [fsize bsize   cpg]
   a:          2097152               64  4.2BSD   2048 16384     1 
-  b:          2599656          2097216    swap                    
+  b:          2599568          2097216    swap                    
   c:        234441647                0  unused                    
-  d:          8388544          4696896  4.2BSD   2048 16384     1 
-  e:          8388608         13085440  4.2BSD   2048 16384     1 
-  f:         12582912         21474048  4.2BSD   2048 16384     1 
-  g:          2097152         34056960  4.2BSD   2048 16384     1 
-  h:         33554432         36154112  4.2BSD   2048 16384     1 
-  j:         12582912         69708544  4.2BSD   2048 16384     1 
-  k:        152150176         82291456  4.2BSD   2048 16384     1 
-
+  d:          8388544          4696800  4.2BSD   2048 16384     1 
+  e:          8388608         13085344  4.2BSD   2048 16384     1 
+  f:         12582912         21473952  4.2BSD   2048 16384     1 
+  g:          2097152         34056864  4.2BSD   2048 16384     1 
+  h:         33554432         36154016  4.2BSD   2048 16384     1 
+  i:          6291456         69708448  4.2BSD   2048 16384     1 
+  j:         12582912         75999904  4.2BSD   2048 16384     1 
+  k:        145858816         88582816  4.2BSD   2048 16384     1
+```
 
 
 
 
 now create all partitions...
 
+```
+newfs sd2[ad-k]
+```
 
-jakkal# newfs sd2a
+```
+/# newfs sd2a
 /dev/rsd2a: 1024.0MB in 2097152 sectors of 512 bytes
 6 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
  160, 414880, 829600, 1244320, 1659040, 2073760,
-jakkal# newfs sd2d
+/# newfs sd2d
 /dev/rsd2d: 4096.0MB in 8388544 sectors of 512 bytes
 21 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
  160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
  3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
  7050400, 7465120, 7879840, 8294560,
-jakkal# newfs sd2e
+/# newfs sd2e
 /dev/rsd2e: 4096.0MB in 8388608 sectors of 512 bytes
 21 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
  160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
  3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
  7050400, 7465120, 7879840, 8294560,
-jakkal# newfs sd2f
+/# newfs sd2f
 /dev/rsd2f: 6144.0MB in 12582912 sectors of 512 bytes
 31 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
@@ -231,12 +280,12 @@ super-block backups (for fsck -b #) at:
  3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
  7050400, 7465120, 7879840, 8294560, 8709280, 9124000, 9538720, 9953440,
  10368160, 10782880, 11197600, 11612320, 12027040, 12441760,
-jakkal# newfs sd2g
+/# newfs sd2g
 /dev/rsd2g: 1024.0MB in 2097152 sectors of 512 bytes
 6 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
  160, 414880, 829600, 1244320, 1659040, 2073760,
-jakkal# newfs sd2h
+/# newfs sd2h
 /dev/rsd2h: 16384.0MB in 33554432 sectors of 512 bytes
 81 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
@@ -251,9 +300,13 @@ super-block backups (for fsck -b #) at:
  24883360, 25298080, 25712800, 26127520, 26542240, 26956960, 27371680,
  27786400, 28201120, 28615840, 29030560, 29445280, 29860000, 30274720,
  30689440, 31104160, 31518880, 31933600, 32348320, 32763040, 33177760,
-jakkal# newfs sd2i
-newfs: sd2i: Device not configured
-jakkal# newfs sd2j
+/# newfs sd2i
+/dev/rsd2i: 3072.0MB in 6291456 sectors of 512 bytes
+16 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
+super-block backups (for fsck -b #) at:
+ 160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
+ 3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960,
+/# newfs sd2j
 /dev/rsd2j: 6144.0MB in 12582912 sectors of 512 bytes
 31 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
@@ -261,9 +314,9 @@ super-block backups (for fsck -b #) at:
  3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
  7050400, 7465120, 7879840, 8294560, 8709280, 9124000, 9538720, 9953440,
  10368160, 10782880, 11197600, 11612320, 12027040, 12441760,
-jakkal# newfs sd2k
-/dev/rsd2k: 74292.1MB in 152150176 sectors of 512 bytes
-367 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
+/# newfs sd2k
+/dev/rsd2k: 71220.1MB in 145858816 sectors of 512 bytes
+352 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
  160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
  3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
@@ -275,7 +328,7 @@ super-block backups (for fsck -b #) at:
  21980320, 22395040, 22809760, 23224480, 23639200, 24053920, 24468640,
  24883360, 25298080, 25712800, 26127520, 26542240, 26956960, 27371680,
  27786400, 28201120, 28615840, 29030560, 29445280, 29860000, 30274720,
- 30689440, 31104160, 31518880, 31933600, 32348320, 32763040, 33177760,
+ 30689440, 31104160, 31518880, 3193300, 32348320, 32763040, 33177760,
  33592480, 34007200, 34421920, 34836640, 35251360, 35666080, 36080800,
  36495520, 36910240, 37324960, 37739680, 38154400, 38569120, 38983840,
  39398560, 39813280, 40228000, 40642720, 41057440, 41472160, 41886880,
@@ -314,11 +367,13 @@ super-block backups (for fsck -b #) at:
  135198880, 135613600, 136028320, 136443040, 136857760, 137272480, 137687200,
  138101920, 138516640, 138931360, 139346080, 139760800, 140175520, 140590240,
  141004960, 141419680, 141834400, 142249120, 142663840, 143078560, 143493280,
- 143908000, 144322720, 144737440, 145152160, 145566880, 145981600, 146396320,
- 146811040, 147225760, 147640480, 148055200, 148469920, 148884640, 149299360,
- 149714080, 150128800, 150543520, 150958240, 151372960, 151787680,
+ 143908000, 144322720, 144737440, 145152160, 145566880
+```
+
+Let's test
 
 
+```
 jakkal# mount /dev/sd2a /mnt
 jakkal# cd /mnt
 /mnt# ls
@@ -339,13 +394,32 @@ Filesystem     Size    Used   Avail Capacity  Mounted on
 /mnt# echo hi > hi
 /mnt# cat hi
 hi
+```
 
 
 cool
+
+```
 cd / ; umount /mnt
+```
 
 let's try to copy stuff
-mount /dev/sd2e /mnt
+
+```
+/# mount /dev/sd2e /mnt
+/# df -h
+Filesystem     Size    Used   Avail Capacity  Mounted on
+/dev/sd0a      986M    515M    422M    55%    /
+/dev/sd0k     97.7G   13.6G   79.2G    15%    /home
+/dev/sd0d      3.9G    198K    3.7G     0%    /tmp
+/dev/sd0f      5.8G    2.2G    3.4G    39%    /usr
+/dev/sd0g      986M    248M    688M    26%    /usr/X11R6
+/dev/sd0h     19.4G    3.8G   14.6G    21%    /usr/local
+/dev/sd0j      5.8G    248M    5.3G     4%    /usr/obj
+/dev/sd0i      2.9G    1.8G   1014M    64%    /usr/src
+/dev/sd0e      5.8G   32.2M    5.5G     1%    /var
+/dev/sd2e      3.9G    2.0K    3.7G     0%    /mnt
+
 cd /mnt
 /mnt# dump -0f - /var/ | restore -rf -
   DUMP: Dumping sub files/directories from /var
@@ -367,54 +441,260 @@ cd /mnt
   DUMP: Date this dump completed:  Tue Oct 18 20:09:18 2022
   DUMP: Average transfer rate: 3183 KB/s
   DUMP: DUMP IS DONE
+```
 
 that creates a restoresymtable which is used for incremental restores;
 -0 effectively means full back
 each higher level means "backup everything since the last backup of a lower level"
 so you would restore backup level 0 and continue with 1, 2... up to how many levels your backup policy has. But that's besides the point, I'm only using it to copy paste the file systems
+
+```
 /mnt# ls -lh restoresymtable 
 -rw-------  1 root  wheel   766K Oct 18 20:09 restoresymtable
+```
 
 
 anyway, let's re-wipe this; we need to go to singleuser mode to do this properly
 
-cd / ; umount /mnt
-newfs sd2e
+```
+# cd / ; umount /mnt
+# newfs sd2e
 /dev/rsd2e: 4096.0MB in 8388608 sectors of 512 bytes
 21 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
 super-block backups (for fsck -b #) at:
  160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
  3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
  7050400, 7465120, 7879840, 8294560,
+```
 
 
 
+now, we should reboot into single user mode with nothing mounted and nothing going on so that we can get a good snapshop. `reboot`, then `boot -s`
+
+start with `/` to get it out of the way.
+
+```
+mount sd2a /mnt
+cd /mnt
+dump -0f - / | restore -rf - 
+sed -i /mnt/etc/fstab -e 's/db0061b2fe09e6a0/f511cf504ce61e02/'
+cd /
+umount /mnt
+```
+
+We need to adjust the new `/etc/fstab` to actually mount the partitions on the new disk.
+
+Dump creates `restoresymtable` which we don't need since we only ever restore the backup, but it helps to make sure when we boot into this later, it actually mounts the correct disk's partitions (e.g. we didn't forget to adjust the fstab). We'll delete those later.
+
+Skip `b` (swap), skip `c` (full disk), skip `d` (`/tmp`), continue from `e`
+
+repeat:
+
+```
+mount /dev/sd2e /mnt
+cd /mnt
+dump -0f - /var | restore -rf - 
+cd /
+umount
+```
+
+And so on.
+
+Let's test the boot. `reboot`, then `boot sd2a:/bsd`
+
+----
+
+Cool. Let's swap the disks IRL...
+
+----
+
+Finally, delete those `restoresymtable` files: (I'm feeling courages and using shell expansions as root, woooo!)
+
+```
+doas rm -f {/,/var/,/home/,/usr/,/usr/X11R6/,/usr/local/,/usr/obj/,/usr/src/}restoresymtable
+```
+```
 
 
 
-shhhhhhhhhooooot I forgot the /usr/src parittion (sd2i); TODO start over
+Benchmarks?
+-----------
 
-and do these changes
-OpenBSD area: 64-234441647; size: 234441583; free: 31
-#                size           offset  fstype [fsize bsize   cpg]
-  a:          2097152               64  4.2BSD   2048 16384     1 # /
-  b:          2599568          2097216    swap                    
-  c:        234441647                0  unused                    
-  d:          8388576          4696800  4.2BSD   2048 16384     1 # /tmp
-  e:         12539168         13085376  4.2BSD   2048 16384     1 # /var
-  f:         12582912         25624544  4.2BSD   2048 16384     1 # /usr
-  g:          2097152         38207456  4.2BSD   2048 16384     1 # /usr/X11R6
-  h:         33889696         40304608  4.2BSD   2048 16384     1 # /usr/local
-  i:          6291456         74194304  4.2BSD   2048 16384     1 # /usr/src
-  j:         12582912         80485760  4.2BSD   2048 16384     1 # /usr/obj
-  k:        141372960         93068672  4.2BSD   2048 16384     1 # /home
+I ran this:
 
-2GiB 4194304
-/var e      8388608                 4GiB
-/usr/local 33554432                 16GiB
-/home ~147664416                    ~68GiB
+```
+doas fio --name=read --iodepth=1 --rw=read --bs=4k --direct=0 --size=512M --numjobs=2 --runtime=240 --group_reporting
+doas fio --name=write --iodepth=1 --rw=write --bs=4k --direct=0 --size=512M --numjobs=2 --runtime=240 --group_reporting
+doas fio --name=randread --iodepth=1 --rw=randread --bs=4k --direct=0 --size=128MB --numjobs=2 --runtime=240 --group_reporting
+doas fio --name=randrw --iodepth=1 --rw=randrw --bs=4k --direct=0 --size=128MB --numjobs=2 --runtime=240 --group_reporting
+```
 
-this is a note for me, not for the blog
-set /etc/mk.conf
-WRKOBJDIR=/usr/obj/ports
-chown jakkal /usr/obj/ports
+I'm not good at disk benchmarks, but usually they test sequential and random reads and writes. 4k should be a block (I don't know how to check), `numjobs` is 2 because I have a single hyperthreaded core, `iodepth=1` because I'm not sure if higher depths are supported without `libaio` or if it matters on SATA. Shrugs, at least I ran the same tests on both disks.
+
+Here's a table:
+
+| Disk            | Sequential read | sequential write  | random read   | random rw                     |
+|:---------------:|-----------------|-------------------|---------------|-------------------------------|
+| **spinny disk** | 10.3 MB/s       | 30.3 MB/s         | 483 KB/s      | 257 KB/s read, 280 KB/s write |
+| **ssd**		  |					|					|				|                               |
+
+Here's the before (with the old spinny disk installed):
+
+Sequential read
+```
+read: (g=0): rw=read, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+...
+fio-3.26
+Starting 2 threads
+Jobs: 2 (f=2): [R(2)][100.0%][r=25.2MiB/s][r=6446 IOPS][eta 00m:00s]
+read: (groupid=0, jobs=2): err= 0: pid=2138416428: Wed Oct 19 21:19:38 2022
+  read: IOPS=2646, BW=10.3MiB/s (10.8MB/s)(1024MiB/99064msec)
+    clat (usec): min=23, max=88329, avg=718.63, stdev=4160.79
+     lat (usec): min=29, max=88335, avg=726.04, stdev=4160.66
+    clat percentiles (usec):
+     |  1.00th=[   25],  5.00th=[   26], 10.00th=[   27], 20.00th=[   27],
+     | 30.00th=[   32], 40.00th=[   33], 50.00th=[   34], 60.00th=[   35],
+     | 70.00th=[   39], 80.00th=[   41], 90.00th=[   85], 95.00th=[  388],
+     | 99.00th=[21627], 99.50th=[32637], 99.90th=[43779], 99.95th=[43779],
+     | 99.99th=[54789]
+   bw (  KiB/s): min= 3238, max=109169, per=99.44%, avg=10526.60, stdev=5844.51, samples=394
+   iops        : min=  808, max=27291, avg=2630.99, stdev=1461.18, samples=394
+  lat (usec)   : 50=88.09%, 100=2.75%, 250=0.40%, 500=4.18%, 750=0.08%
+  lat (usec)   : 1000=1.21%
+  lat (msec)   : 2=0.25%, 4=0.15%, 10=0.17%, 20=0.95%, 50=1.76%
+  lat (msec)   : 100=0.01%
+  cpu          : usr=3.26%, sys=8.55%, ctx=15871, majf=0, minf=6
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=262144,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+   READ: bw=10.3MiB/s (10.8MB/s), 10.3MiB/s-10.3MiB/s (10.8MB/s-10.8MB/s), io=1024MiB (1074MB), run=99064-99064msec
+```
+
+Sequential write:
+
+```
+write: (g=0): rw=write, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+...
+fio-3.26
+Starting 2 threads
+write: Laying out IO file (1 file / 512MiB)
+write: Laying out IO file (1 file / 512MiB)
+Jobs: 2 (f=2): [W(2)][97.1%][w=26.3MiB/s][w=6735 IOPS][eta 00m:01s]
+write: (groupid=0, jobs=2): err= 0: pid=1676831276: Wed Oct 19 21:28:13 2022
+  write: IOPS=7754, BW=30.3MiB/s (31.8MB/s)(1024MiB/33807msec); 0 zone resets
+    clat (usec): min=28, max=152399, avg=213.93, stdev=2318.41
+     lat (usec): min=35, max=152407, avg=223.02, stdev=2318.37
+    clat percentiles (usec):
+     |  1.00th=[   36],  5.00th=[   43], 10.00th=[   47], 20.00th=[   48],
+     | 30.00th=[   51], 40.00th=[   57], 50.00th=[   73], 60.00th=[   97],
+     | 70.00th=[  119], 80.00th=[  128], 90.00th=[  159], 95.00th=[  180],
+     | 99.00th=[  277], 99.50th=[  537], 99.90th=[35390], 99.95th=[43779],
+     | 99.99th=[98042]
+   bw (  KiB/s): min=19416, max=44486, per=100.00%, avg=31041.66, stdev=2323.90, samples=134
+   iops        : min= 4853, max=11119, avg=7759.90, stdev=580.96, samples=134
+  lat (usec)   : 50=29.27%, 100=33.37%, 250=36.07%, 500=0.79%, 750=0.03%
+  lat (usec)   : 1000=0.01%
+  lat (msec)   : 2=0.01%, 4=0.01%, 10=0.05%, 20=0.16%, 50=0.22%
+  lat (msec)   : 100=0.03%, 250=0.01%
+  cpu          : usr=11.37%, sys=37.57%, ctx=2689, majf=0, minf=1
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=0,262144,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+  WRITE: bw=30.3MiB/s (31.8MB/s), 30.3MiB/s-30.3MiB/s (31.8MB/s-31.8MB/s), io=1024MiB (1074MB), run=33807-33807msec
+```
+
+Random read:
+
+```
+randread: (g=0): rw=randread, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+...
+fio-3.26
+Starting 2 threads
+Jobs: 2 (f=2): [r(2)][100.0%][r=552KiB/s][r=138 IOPS][eta 00m:00s]
+randread: (groupid=0, jobs=2): err= 0: pid=1071443244: Wed Oct 19 21:32:56 2022
+  read: IOPS=109, BW=438KiB/s (448kB/s)(103MiB/240024msec)
+    clat (usec): min=23, max=88032, avg=18230.89, stdev=14964.63
+     lat (usec): min=29, max=88039, avg=18237.47, stdev=14964.61
+    clat percentiles (usec):
+     |  1.00th=[   27],  5.00th=[   30], 10.00th=[   35], 20.00th=[   37],
+     | 30.00th=[   39], 40.00th=[17433], 50.00th=[23200], 60.00th=[26346],
+     | 70.00th=[29230], 80.00th=[32113], 90.00th=[35914], 95.00th=[39060],
+     | 99.00th=[43254], 99.50th=[44827], 99.90th=[46924], 99.95th=[47973],
+     | 99.99th=[62653]
+   bw (  KiB/s): min=  214, max=  856, per=99.80%, avg=437.82, stdev=56.06, samples=958
+   iops        : min=   52, max=  214, avg=109.43, stdev=14.03, samples=958
+  lat (usec)   : 50=36.07%, 100=0.57%, 250=0.16%, 500=0.02%
+  lat (msec)   : 4=0.02%, 10=0.38%, 20=5.84%, 50=56.91%, 100=0.03%
+  cpu          : usr=0.18%, sys=0.49%, ctx=16656, majf=0, minf=5
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=26276,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+   READ: bw=438KiB/s (448kB/s), 438KiB/s-438KiB/s (448kB/s-448kB/s), io=103MiB (108MB), run=240024-240024msec
+```
+
+Random readwrite:
+
+```
+randrw: (g=0): rw=randrw, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+...
+fio-3.26
+Starting 2 threads
+randrw: Laying out IO file (1 file / 128MiB)
+randrw: Laying out IO file (1 file / 128MiB)
+Jobs: 2 (f=2): [m(2)][100.0%][r=648KiB/s,w=712KiB/s][r=162,w=178 IOPS][eta 00m:00s]
+randrw: (groupid=0, jobs=2): err= 0: pid=1888610348: Wed Oct 19 21:41:06 2022
+  read: IOPS=64, BW=257KiB/s (263kB/s)(60.2MiB/240020msec)
+    clat (usec): min=23, max=2606.6k, avg=15257.28, stdev=48556.36
+     lat (usec): min=29, max=2606.6k, avg=15263.83, stdev=48556.46
+    clat percentiles (usec):
+     |  1.00th=[     27],  5.00th=[     29], 10.00th=[     35],
+     | 20.00th=[     36], 30.00th=[     37], 40.00th=[     38],
+     | 50.00th=[     41], 60.00th=[  15401], 70.00th=[  20841],
+     | 80.00th=[  24511], 90.00th=[  28443], 95.00th=[  32113],
+     | 99.00th=[ 263193], 99.50th=[ 375391], 99.90th=[ 505414],
+     | 99.95th=[ 557843], 99.99th=[1367344]
+   bw (  KiB/s): min=   16, max=  769, per=100.00%, avg=273.99, stdev=87.06, samples=888
+   iops        : min=    4, max=  192, avg=68.48, stdev=21.76, samples=888
+  write: IOPS=64, BW=260KiB/s (266kB/s)(60.9MiB/240020msec); 0 zone resets
+    clat (usec): min=31, max=4929.2k, avg=15623.81, stdev=64345.23
+     lat (usec): min=38, max=4929.2k, avg=15630.99, stdev=64345.38
+    clat percentiles (usec):
+     |  1.00th=[     39],  5.00th=[     44], 10.00th=[     47],
+     | 20.00th=[     50], 30.00th=[     53], 40.00th=[     64],
+     | 50.00th=[     73], 60.00th=[  15664], 70.00th=[  21103],
+     | 80.00th=[  24511], 90.00th=[  28705], 95.00th=[  32113],
+     | 99.00th=[ 242222], 99.50th=[ 375391], 99.90th=[ 541066],
+     | 99.95th=[ 633340], 99.99th=[3472884]
+   bw (  KiB/s): min=   16, max=  769, per=100.00%, avg=280.23, stdev=85.96, samples=880
+   iops        : min=    4, max=  192, avg=70.04, stdev=21.48, samples=880
+  lat (usec)   : 50=37.28%, 100=18.65%, 250=0.45%, 500=0.02%, 750=0.02%
+  lat (usec)   : 1000=0.01%
+  lat (msec)   : 4=0.01%, 10=0.52%, 20=10.71%, 50=29.81%, 100=1.18%
+  lat (msec)   : 250=0.36%, 500=0.86%, 750=0.12%, 1000=0.01%, 2000=0.01%
+  lat (msec)   : >=2000=0.01%
+  cpu          : usr=0.19%, sys=0.58%, ctx=13596, majf=0, minf=3
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=15414,15595,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+   READ: bw=257KiB/s (263kB/s), 257KiB/s-257KiB/s (263kB/s-263kB/s), io=60.2MiB (63.1MB), run=240020-240020msec
+  WRITE: bw=260KiB/s (266kB/s), 260KiB/s-260KiB/s (266kB/s-266kB/s), io=60.9MiB (63.9MB), run=240020-240020msec
+```
+
+
+Here's the after (with the SSD installed):
