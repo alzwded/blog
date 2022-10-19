@@ -319,10 +319,6 @@ super-block backups (for fsck -b #) at:
  149714080, 150128800, 150543520, 150958240, 151372960, 151787680,
 
 
-
-notice there is no sd2i...
-I know this is a "pseudo" partition for FAT stuff (or foreign partition types), but I couldn't find concrete explanations. Maybe I'll dive into OpenBSD's code and maybe I'll find a comment mentioning the WHYs. Moving on...
-
 jakkal# mount /dev/sd2a /mnt
 jakkal# cd /mnt
 /mnt# ls
@@ -413,10 +409,10 @@ OpenBSD area: 64-234441647; size: 234441583; free: 31
   j:         12582912         80485760  4.2BSD   2048 16384     1 # /usr/obj
   k:        141372960         93068672  4.2BSD   2048 16384     1 # /home
 
-
-/var e 4194304                      2GiB
+2GiB 4194304
+/var e      8388608                 4GiB
 /usr/local 33554432                 16GiB
-/home ~147664416                    ~70GiB
+/home ~147664416                    ~68GiB
 
 this is a note for me, not for the blog
 set /etc/mk.conf
