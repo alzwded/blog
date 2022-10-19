@@ -513,7 +513,6 @@ Finally, delete those `restoresymtable` files: (I'm feeling courages and using s
 ```
 doas rm -f {/,/var/,/home/,/usr/,/usr/X11R6/,/usr/local/,/usr/obj/,/usr/src/}restoresymtable
 ```
-```
 
 
 
@@ -538,9 +537,12 @@ Here's a table:
 | **spinny disk** | 10.3 MB/s       | 30.3 MB/s         | 483 KB/s      | 257 KB/s read, 280 KB/s write |
 | **ssd**		  |					|					|				|                               |
 
+### Before
+
 Here's the before (with the old spinny disk installed):
 
-Sequential read
+#### Sequential read
+
 ```
 read: (g=0): rw=read, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
 ...
@@ -574,7 +576,7 @@ Run status group 0 (all jobs):
    READ: bw=10.3MiB/s (10.8MB/s), 10.3MiB/s-10.3MiB/s (10.8MB/s-10.8MB/s), io=1024MiB (1074MB), run=99064-99064msec
 ```
 
-Sequential write:
+#### Sequential write:
 
 ```
 write: (g=0): rw=write, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
@@ -611,7 +613,7 @@ Run status group 0 (all jobs):
   WRITE: bw=30.3MiB/s (31.8MB/s), 30.3MiB/s-30.3MiB/s (31.8MB/s-31.8MB/s), io=1024MiB (1074MB), run=33807-33807msec
 ```
 
-Random read:
+#### Random read:
 
 ```
 randread: (g=0): rw=randread, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
@@ -644,7 +646,7 @@ Run status group 0 (all jobs):
    READ: bw=438KiB/s (448kB/s), 438KiB/s-438KiB/s (448kB/s-448kB/s), io=103MiB (108MB), run=240024-240024msec
 ```
 
-Random readwrite:
+#### Random readwrite:
 
 ```
 randrw: (g=0): rw=randrw, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
@@ -696,5 +698,6 @@ Run status group 0 (all jobs):
   WRITE: bw=260KiB/s (266kB/s), 260KiB/s-260KiB/s (266kB/s-266kB/s), io=60.9MiB (63.9MB), run=240020-240020msec
 ```
 
+### After
 
 Here's the after (with the SSD installed):
