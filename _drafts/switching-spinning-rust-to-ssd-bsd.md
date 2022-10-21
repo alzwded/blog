@@ -1,3 +1,45 @@
+---
+title: "Replacing spinning rust with a brand new SSD in my OpenBSD Laptop. Or, how to get your modern PC to require a boot floppy to boot"
+layout: post
+---
+I have restarted my OpenBSD journey about a month ago mostly to try out writing software with `pledge(2)` and `unveil(2)`. It's actually the second time I have an OpenBSD system, but the last time I was too young to appreciate it. I especially like how straight forward is to get started after [having difficulties](https://www.openbsd.org/errata71.html) [getting wifi to work](https://man.openbsd.org/fw_update) and exFAT being not shipped by default and VFAT sticks being a thing of the past... But once I got all the firmware blobs and kernel rebuilt, it was really straight forward.
+
+I decided to try to ressurrect my old netbook, which is [this thing](https://il.dynabook.com/en/discontinued-products/toshiba-nb250-101/) (I'd give you the output of `pcidump -v`, but currently that panics the kernel; I suspect it's because a particular Intel controller does a bunch of stuff, and a couple of them are *not configured*, and the kernel function to dump all of them involves some address mappings which probably fail for the *not configured* ones). The funny thing is that they used to ship a 32bit OS on a 64bit system to get it to "run better" and use less memory. Sticking with the theme, yes, I have the i386 build of OpenBSD.
+
+The reason that laptop was retired was mostly because the battery died, and because it was slow and barely a functional computer when it was brand spanking new in 2009. Anyway, I have since acquired quite a collection of laptops and desktops, so I don't need to depend on it for speed, power or battery life.
+
+I've since found a new battery, which, compared to the specs, actually gives me a couple of hours extra battery life. Next would be swapping out the hard drive, since these things fail over time. The CPU doesn't seem to overheat at all, so I don't feel like re-thermal pasting it. The fan could probably use some cleaning, but it looks like I have to take the whole danged thing appart to get to it, and that's a problem for future me.
+
+Today, let's focus on replacing the hard drive with a brand new modern SSD. I like SSDs in laptop because it reduces the amount of moving parts. It's a bit of a side-grade (foreshadowing...), since we'll be switching from 160GB to 120GB.
+
+The list of things we need to do today:
+
+1. Acquire a SATA-to-USB adapter
+2. Benchmark the old disk
+3. Prepare the new disk
+4. Copy everything to the new disk and check things are there
+5. Test boot with root from the new disk
+6. Install the bootloader to the new disk
+7. Swap the disks
+8. Boot from the new disk for real and benchmark the new disk
+9. Be proud of self.
+
+## 1. Acquire a SATA-to-USB adapter.
+
+I got a "Spacer USB 3.0 laptop External HDD Rack", which included a case to put a disk with its adapter into, and a pretty sweet faux leather case(?) to put it in. I was only interested in the SATA adapter, but this was at the sweet spot between "cheap" and "good reviews" over on the local market.
+
+Done!
+
+## 2. Benchmark the old disk
+
+It works about as well as a 2.5" disk from '09. See benchmarks at the end.
+
+## 3. Prepare the new disk
+
+First things first, what is my new disk? Let's plug it in, and the console will tell us it's `sd2`. Cool.
+
+Let's start with `fdisk(8)`. I expect a single giant "partition" on the old disk.
+
 ```
 ~> doas fdisk sd0
 Disk: sd0       geometry: 19457/255/63 [312581808 Sectors]
@@ -11,6 +53,11 @@ Offset: 0       Signature: 0xAA55
 *3: A6      0   1   2 -  19457  80  63 [          64:   312581744 ] OpenBSD
 ```
 
+Indeed. Let's replicate that on the new disk with the magic "initialize disk".
+
+```
+doas fdisk -iy sd2
+```
 
 ```
 ~> doas fdisk sd2
@@ -25,15 +72,9 @@ Offset: 0       Signature: 0xAA55
 *3: A6      0   1   2 -  14593  80  62 [          64:   234441583 ] OpenBSD  
 ```
 
+Nice. Cylinders, heads and sectors are starting to rear their ugly heads, but this is something we tollerate when it comes to hard drives on PCs.
 
-```
-doas fdisk -i sd2
-y
-```
-
-
-
-
+Let's check the existing disk label:
 
 
 ```
@@ -68,14 +109,10 @@ drivedata: 0
   k:        211459520        101122272  4.2BSD   2048 16384 12960 # /home
 ```
 
+And `df`:
 
 ```
-disklabel sd2
-16 partitions:
-#                size           offset  fstype [fsize bsize   cpg]
-  c:        234441647                0  unused 
-
-df -h
+> df -h
 Filesystem     Size    Used   Avail Capacity  Mounted on
 /dev/sd0a      986M    515M    422M    55%    /
 /dev/sd0k     97.7G   13.6G   79.2G    15%    /home
@@ -88,17 +125,32 @@ Filesystem     Size    Used   Avail Capacity  Mounted on
 /dev/sd0e      5.8G   32.3M    5.5G     1%    /var
 ```
 
+Originally, it was a bog standard automagic partitioning that OpenBSD provides. No complaints so far.
+
+```
+disklabel sd2
+16 partitions:
+#                size           offset  fstype [fsize bsize   cpg]
+  c:        234441647                0  unused 
+
+```
 
 The numbers `disklabel(8)` shows are sector counts, and a sector
 is 512 bytes (because diskabel said so, though in my experience,
-drive firmware almost always reports 512).
+drive firmware almost always reports 512; maybe it was part of
+the original IBM PC spec? Who knows; it turns out the original
+spec lasted a good 3 years before hard drives became bigger than
+the max representable size, he he).
+
+To convert, you can use `dc(1)` or `bc(1)` or `expr(1)` or a calculator or your brain. I use `dc`:
 
 ```
-dc 2k GB 2 1024 1024 * * * p       => blocks
-dc 2k BLOCKS 2 / 1024 / 1024 / p   => GB
+pseudo> dc
+2k «GB» 2 1024 1024 * * * p       => blocks
+2k «BLOCKS» 2 / 1024 / 1024 / p   => GB
 ```
 
-We can even alias this in tcsh
+We can even alias this in tcsh:
 
 ```
 > alias GBtoS 'echo "5k \!:1 2 1024 1024 * * * p" | dc'
@@ -111,9 +163,7 @@ We can even alias this in tcsh
 
 I wouldn't stick that in my user's rc, but it's handy while we're figuring out these counts. The trick is to divide/multiply by 2 and ignore the last 6 digits.
 
-
-
-let's try automatic mode
+Back to disk labeling, let's try automatic mode:
 
 ```
 disklabel -E sd2
@@ -134,13 +184,12 @@ OpenBSD area: 64-234441647; size: 234441583; free: 31
   k:        141372960         93068672  4.2BSD   2048 16384     1 # /home
 ```
 
-Close, but let's say I do not like that. I think I'll round down /var to 4GB and /usr/local to 16GB. That should give me almost 2 gigs for /home. I could also decide I want to consolidate `a`, `f` and `g` and sum up their sizes into a single big a partition.
+Close, but let's say I do not like that. I think I'll round down `/var` to 4GB and `/usr/local` to 16GB. That should give me almost 2 gigs extra for `/home`. I could also decide I want to consolidate `a`, `f` and `g` and sum up their sizes into a single big a partition, but nah.
 
-delete everything with `z`
-
+Delete everything with `z` and add each individual partition with `a x`:
 
 ```
-disklabel -E sd2
+> disklabel -E sd2
 Label editor (enter '?' for help at any prompt)
 sd2> z
 sd2*> w
@@ -164,9 +213,6 @@ sd2*> a e
 offset: [13085344] 
 size: [221356303] 8388608
 FS type: [4.2BSD] 
-sd2*> a f
-offset: [21473952] 12582912
-'f' aligned offset 12582912 lies outside the OpenBSD bounds or inside another partition
 sd2*> a f
 offset: [21473952] 
 size: [212967695] 12582912
@@ -208,8 +254,6 @@ OpenBSD area: 64-234441647; size: 234441583; free: 31
 sd2*> w
 ```
 
-
-
 ```
 doas disklabel sd2
 # /dev/rsd2c:
@@ -243,14 +287,15 @@ drivedata: 0
   k:        145858816         88582816  4.2BSD   2048 16384     1
 ```
 
-
-
-
-now create all partitions...
+Now, create all partitions...
 
 ```
-newfs sd2[ad-k]
+foreach d ( sd2{a,d,e,f,g,h,i,j,k} )
+	newfs $d
+end
 ```
+
+Or, the slow way:
 
 ```
 /# newfs sd2a
@@ -370,7 +415,7 @@ super-block backups (for fsck -b #) at:
  143908000, 144322720, 144737440, 145152160, 145566880
 ```
 
-Let's test
+Let's test a partition, because why not:
 
 
 ```
@@ -396,14 +441,13 @@ Filesystem     Size    Used   Avail Capacity  Mounted on
 hi
 ```
 
-
-cool
+Cool.
 
 ```
 cd / ; umount /mnt
 ```
 
-let's try to copy stuff
+Let's try to copy stuff.
 
 ```
 /# mount /dev/sd2e /mnt
@@ -420,7 +464,7 @@ Filesystem     Size    Used   Avail Capacity  Mounted on
 /dev/sd0e      5.8G   32.2M    5.5G     1%    /var
 /dev/sd2e      3.9G    2.0K    3.7G     0%    /mnt
 
-cd /mnt
+/# cd /mnt
 /mnt# dump -0f - /var/ | restore -rf -
   DUMP: Dumping sub files/directories from /var
   DUMP: Dumping file/directory /var/
@@ -443,18 +487,20 @@ cd /mnt
   DUMP: DUMP IS DONE
 ```
 
-that creates a restoresymtable which is used for incremental restores;
--0 effectively means full back
-each higher level means "backup everything since the last backup of a lower level"
-so you would restore backup level 0 and continue with 1, 2... up to how many levels your backup policy has. But that's besides the point, I'm only using it to copy paste the file systems
+The OpenBSD internet sources recommend `dump(8)` and `tar(1)`. `dump` works on the raw device (e.g. `/dev/rsd0a`) which will allow us to skip mounting some things once we get to copying everything. `cp` won't work because you can't tell it to stay on just one filesystem nor to exclude files, which complicates things.
+
+`dump` creates a restoresymtable which is used for incremental restores;
+-0 effectively means full back each higher level means "backup everything since the last backup of a lower level",
+so you would restore backup level 0 and continue with 1, 2... up to how many levels your backup policy has. But that's besides the point, I'm only using it to copy paste the file systems one time.
 
 ```
 /mnt# ls -lh restoresymtable 
 -rw-------  1 root  wheel   766K Oct 18 20:09 restoresymtable
 ```
 
-
-anyway, let's re-wipe this; we need to go to singleuser mode to do this properly
+Anyway, let's re-wipe this; we need to go to singleuser mode to do this properly.
+Singleuser mode mounts `/` readonly and nothing else, which is a great time to
+duplciate everything without missing any work.
 
 ```
 # cd / ; umount /mnt
@@ -467,58 +513,120 @@ super-block backups (for fsck -b #) at:
  7050400, 7465120, 7879840, 8294560,
 ```
 
+## 4. Copy everything
 
+Reboot into single user mode with nothing mounted and nothing going on and a readonly `/`, so that we can get a good snapshop.
 
-now, we should reboot into single user mode with nothing mounted and nothing going on so that we can get a good snapshop. `reboot`, then `boot -s`
+`reboot`, then `boot -s` at the `boot>` prompt.
 
-start with `/` to get it out of the way.
+It prompts for a shell; I've had `tcsh` compiled statically and installed in `/bin`, so I have that available to me. So I type in `/bin/tcsh`.
+
+Before we go any further, we need a read-write `/tmp`. Slice `sd0d` will not get cloned, since that *is* `/tmp`, and I don't have that much RAM on my system either (1GB), so I might as well mount the real `sd0d`:
 
 ```
-mount sd2a /mnt
+mount /tmp
+```
+
+If you had a single `/`, you would have to use `mount_mfs(8)` to get a ramdisk on `/tmp` (if you hadn't done that already, in which case `mount /tmp`).
+
+Start with `/` to get it out of the way, since it has an annoying extra step:
+
+```
+mount /dev/sd2a /mnt
 cd /mnt
-dump -0f - / | restore -rf - 
-sed -i /mnt/etc/fstab -e 's/db0061b2fe09e6a0/f511cf504ce61e02/'
+dump -0f - /dev/rsd0a | restore -rf - 
+```
+
+*Note, in single user mode, it doesn't exactly actually really know what device `/` is, so we have to tell it. 
+It's nice `dump` takes raw devices, since it saves us from having to mount all the partitions on the original disk,
+which means less opportunities to have our disks diverge.*
+
+That's the copy, but `/etc/fstab` contains the *DUID* of the **old** disk.
+If you scroll back up, both were mentioned, so we can do a `s/re/place/`.
+If you're following closely, we don't have `/usr` nor `/usr/local` mounted,
+which means most fun things aren't available, though, thankfully, good
+ol' reliable `ed(1)` is. If you know a bit of `sed(1)` and a bit of `vi(1)`, you
+know `ed`.
+
+```
+> ed /mnt/etc/fstab
+%s/db0061b2fe09e6a0/f511cf504ce61e02/
+%n
+wq
+```
+
+`%` means "address all lines" (like `vi`), `s///` means replace (like `sed` and `vi`),
+`n` means "print with line numbers" (like `ex(1)`; there's also the basic `p` for print, but
+I like my line numbers), and then there's `wq` (like `vi`) to save and quit.
+
+*Fun fact, in ed's implementation, `q` is actually a modifier of `w` in this, and you can't generally chain commands.*
+
+Anyway, enough about `ed` (my favourite text editor; btw, I recommend the book [Ed Mastery](https://www.goodreads.com/book/show/39697206-ed-mastery)). We're done with `/`.
+
+```
 cd /
 umount /mnt
 ```
 
-We need to adjust the new `/etc/fstab` to actually mount the partitions on the new disk.
-
 Dump creates `restoresymtable` which we don't need since we only ever restore the backup, but it helps to make sure when we boot into this later, it actually mounts the correct disk's partitions (e.g. we didn't forget to adjust the fstab). We'll delete those later.
 
-Skip `b` (swap), skip `c` (full disk), skip `d` (`/tmp`), continue from `e`
+For the remaining partitions... Skip `b` (swap), skip `c` (full disk), skip `d` (`/tmp`), continue from `e` through the end.
 
 repeat:
 
 ```
-mount /dev/sd2e /mnt
+mount /dev/sd2X /mnt
 cd /mnt
-dump -0f - /var | restore -rf - 
+dump -0f - /dev/rsd0X | restore -rf - 
 cd /
 umount
 ```
 
-And so on.
+It's important to be in `/mnt` *before* running `restore`, `restore` will dump stuff in its cwd.  If you've consolidated some partitions, make sure you are in the correct `/mnt` subdirectory before running `restore`.
+
+Oh, and if you've *split* partitions, then make sure all the target slices are *moutned* before running `restore`, so that data ends up in the correct place.
+
+## 5. Test new disk has all the data for it to boot to the same desktop you know and love
 
 Let's test the boot. `reboot`, then `boot sd2a:/bsd`
+
+And I get dropped to a TTY. Weird. I log in, see `xenodm` failed inexplicably, try to start, X comes up for a split second, then crashes, and the logs aren't helpful. So I did some googling related to an unrelated error message, and some fellow recommended that some packages need to be installed, so I try to run `pkg_add(1)` and *there it is*, `/tmp` has the wrong permissions. No idea how, no idea why, but this is something I need to remember to check in the future on any system that has gremlins. It was `0755`, it should be `1777`, so, as root, `chmod 1777 /tmp`. Now X starts. But I'd rather just reboot and make sure it works... Again, `boot sd2a:/bsd`.
+
+Aaaaand it works fine. X start up. `vim` starts up. Yay!
 
 ![confirm restoresymtable is there](../../../assets/images/2022-10-23-ssd/restoresymtableAreThereUSBBoot.png)
 
 *(hmmm... when did that core dump get there?)*
 
-----
+## 6. Install the bootloader
+
+We're not quite done with the disk yet, it has no boot loader. We need to use `installboot(8)`. The `i386` manpage says to just *run* it, so...
+
+```
+installboot sd2
+```
+
+If you want to know more about the 3 (or more if not on PC?) stages of booting, refer to the man pages.
+
+Another round of boot tests; this time, we need to kindly ask our BIOS to boot off of USB. Spoilers: it works fine.
+
+## 7. Swap the disks
 
 Cool. Let's swap the disks IRL...
 
 Looking at the bottom of the laptop, it looks like there are a couple of Torx screws to get out of the way (because I have to justify having bought a couple of sets of Torx heads over the years), and the maintenance manual confirms this. The maintenance manual also says to *"carefully remove the Hard Drive cover as shown in the figure"* but it doesn't actually show how. If you have such a laptop and you don't want to break the cover (which includes shielding), you're supposed to remove if inward-to-outward (pull up from the VGA port side) while gently pulling it towards the longer edge (that frees up the last tab on the shorter edge), and then you can pull it out towards the VGA port side.
 
-The old disk just slides out (fun fact -- the maintenance manual mentioned every other paragraph to not press down on the "middle of the hard drive" to not damage the platter or head). It's in some sort of caddy, imprisoned by 4 philips head screws. Those come right out, SSD goes in, SSD slides in, cover is reinstalled, we should be good to go.
+The old disk just slides out *(fun fact -- the maintenance manual mentioned every other paragraph to not press down on the "middle of the hard drive" to not damage the platter or head)*. It's in some sort of caddy, imprisoned by 4 philips head screws. Those come right out, SSD goes in, SSD slides in, cover is reinstalled, we should be good to go.
+
+```
+reboot
+```
 
 TODO integrate pictures and whatnot
 
-----
+## 8. Boot from the new disk for real and benchmark the new disk
 
-Aaaaaand we run into a bit of a wall. My Bios doesn't "see" the SSD. Much googling has given me some pointers, like flip between "IDE" and "AHCI" SATA modes in the BIOS, unfortunately, I cannot seem to enter BIOS settings (it just reboots when the BIOS setup menu is supposed to show up). This laptop used to have a Windows 7 utility called Toshiba HWSetup, which is long gone. I'll try to get windows on some USB drive to try to get some version of that installed and maybe it lets me switch between those modes, or at least disable PXEBOOT or maybe something else (foreshadowing...)
+Aaaaaand we run into a bit of a wall. My Bios doesn't "see" the SSD. Much googling has given me some pointers, like flip between "IDE" and "AHCI" SATA modes in the BIOS, unfortunately, I cannot seem to enter BIOS settings (it just reboots when the BIOS setup menu is supposed to show up; and I could only find [someone on the internet with the same problem and no solution](https://xkcd.com/979/)). This laptop used to have a Windows 7 Starter installation with a Windows Vista utility called Toshiba HWSetup, which is long gone. I'll try to get windows on some USB drive to try to get some version of that installed and maybe it lets me switch between those modes, or at least disable PXEBOOT or maybe something else (foreshadowing...). Anyway, I've tried Win PE and Hiren's BootCD and obvious stuff, that utility won't work there, and I've tried 5 versions, and I don't have a spare disk for a real install right now (I'm still hanging on to the old Hitachi in case this SSD thing doesn't work out... foreshadowing).
 
 So, I know the drive boots off of the SATA-to-USB interface, I know it boots off of the SATA-to-USB interface without the old hard drive in there, and I know I can boot off of a usb thumb drive (which is how I installed OpenBSD on this thing in the first place).
 
@@ -539,6 +647,7 @@ cp /bsd /mnt/bsd
 Reading about `boot.conf` in the man pages, I see I can specify some things to have a few characters less to type:
 
 ```sh
+mv /mnt/etc/boot.conf /mnt/etc/boot.conf.old
 cat <<EOF > /mnt/etc/boot.conf
 set image /bsd
 set howto -a
@@ -549,13 +658,14 @@ Now let's get out of here:
 
 ```sh
 cd /
+sync -f /mnt
 umount /mnt
 reboot
 ```
 
 I've searched the whole wide world (wide web) if I can tell the bootloader to have `root on sd0a swap on sd0b dump on sd0b`, but it turns out you can only do that when recompiling the kernel. I'll wait on that since recompiling the kernel on this ancient netbook takes at least two hours. But, now that it's back at the `boot>` prompt, let's hit enter and see what happens.
 
-It reads the new `/etc/boot.conf` and uses the new `/bsd` kernel which we copied over from our SSD, and then asks for the root device: `sd0a`, enter, aaaaand... Yes, we're booted off of the SSD, X is running, I can log in, everything is mounted, and we can remove the USB stick.
+It reads the new `/etc/boot.conf` and uses the new `/bsd` kernel which we copied over from our SSD (and ultimately from the original disk), and then asks for the root device: `sd0a`, enter, aaaaand... Yes, we're booted off of the SSD, X is running, I can log in, everything is mounted, and we can remove the USB stick.
 
 I am pleasantly surprised OpenBSD can do this (though I know of an HP-UX "mini" in a particular basement that can only boot off of a very specific floppy, so it's not unheard of in the world of UNXIen). I need to try this on Linux at some point, it probably requires grub and the kernel on the USB fub, which then magically becomes the `/boot` partition or something like that; or maybe grub can already read the SSD at that point?
 
@@ -573,12 +683,12 @@ Finally, delete those `restoresymtable` files: (I'm feeling courages and using s
 doas rm -f {/,/var/,/home/,/usr/,/usr/X11R6/,/usr/local/,/usr/obj/,/usr/src/}restoresymtable
 ```
 
-![manually deleting them because I was too lazy to type that command](../../../assets/images/2022-10-23-ssd/restoresymtableAreThere.png)
+![me manually deleting them because I was too lazy to type that command](../../../assets/images/2022-10-23-ssd/restoresymtableAreThere.png)
 
+## 9. Benchmarks?
+-----------------
 
-
-Benchmarks?
------------
+Now that I can proudly boot my system again, albeit with a few extra steps, a magic incantation and by sacrificing a goat, let's see what I've gained, if anything.
 
 I ran this:
 
@@ -600,9 +710,15 @@ Here's a table:
 | **spinny disk** | 10.3 MB/s       | 30.3 MB/s  (?)    | 483 KB/s      | 257-479 KB/s read, 280-482 KB/s write |
 | **ssd**         | 73.0 MB/s       | 55.5 MB/s         | 45 MB/s       | 13.4 MB/s read, 13.5 MBs write|
 
-Sequential write on the spinny disk is a bit weird. In general, writes seem to have gone quicker. I didn't have any notable processes running, and repeating the test gave consistently better write results. Maybe the disk was just getting old?
+*Note: Sequential write on the spinny disk is a bit weird. In general, writes seem to have gone quicker. I didn't have any notable processes running, and repeating the test gave consistently better write results. Maybe the disk was just getting old?*
+
+To me, the only relevant benchmark is `random reads and writes`, since that is the closest to telling me where the bottleneck would be when compiling & building big- or many projects. I'm most happy about the greatly reduced latency (which I  care about mcuh more than GBps sequential transfer speeds). And with 13ish MB/s in random RW, and 1033 MHz RAM, I'm pretty sure it's the CPU, which is practically glued to the motherboard.
 
 Overall, moving to SSD was a net upgrade. Well, if you disregard the fact that I need a USB boot key and system upgrades have a couple of more steps to it. The main reason I wanted to replace the old disk was to know that I can (the old disk was at least 13 years old, which was waaaay past its intended life time) and because I wanted to preemptively do so before it died. The speed boost is a bonus, the convoluted boot process is a malus. But hey, at least now doing full disk encryption wouldn't be an annoyance since I need the boot stick anyway, amirite? :smile:
+
+I should probably go about recompiling that kernel to have `root on ... swap on ... dump on ...`, it might genuinely take a lot less time this time around, but I'll wait until I upgrade to [7.2](https://www.openbsd.org/72.html), otherwise it's one pointless extra kernel recompile.
+
+Next, the raw output of `fio` if it means anything to you.
 
 ### Before
 
