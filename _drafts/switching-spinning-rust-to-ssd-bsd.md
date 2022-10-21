@@ -506,6 +506,59 @@ Let's test the boot. `reboot`, then `boot sd2a:/bsd`
 
 Cool. Let's swap the disks IRL...
 
+Looking at the bottom of the laptop, it looks like there are a couple of Torx screws to get out of the way (because I have to justify having bought a couple of sets of Torx heads over the years), and the maintenance manual confirms this. The maintenance manual also says to *"carefully remove the Hard Drive cover as shown in the figure"* but it doesn't actually show how. If you have such a laptop and you don't want to break the cover (which includes shielding), you're supposed to remove if inward-to-outward (pull up from the VGA port side) while gently pulling it towards the longer edge (that frees up the last tab on the shorter edge), and then you can pull it out towards the VGA port side.
+
+The old disk just slides out (fun fact -- the maintenance manual mentioned every other paragraph to not press down on the "middle of the hard drive" to not damage the platter or head). It's in some sort of caddy, imprisoned by 4 philips head screws. Those come right out, SSD goes in, SSD slides in, cover is reinstalled, we should be good to go.
+
+TODO integrate pictures and whatnot
+
+----
+
+Aaaaaand we run into a bit of a wall. My Bios doesn't "see" the SSD. Much googling has given me some pointers, like flip between "IDE" and "AHCI" SATA modes in the BIOS, unfortunately, I cannot seem to enter BIOS settings (it just reboots when the BIOS setup menu is supposed to show up). This laptop used to have a Windows 7 utility called Toshiba HWSetup, which is long gone. I'll try to get windows on some USB drive to try to get some version of that installed and maybe it lets me switch between those modes, or at least disable PXEBOOT or maybe something else (foreshadowing...)
+
+So, I know the drive boots off of the SATA-to-USB interface, I know it boots off of the SATA-to-USB interface without the old hard drive in there, and I know I can boot off of a usb thumb drive (which is how I installed OpenBSD on this thing in the first place).
+
+Booting off of a USB pen drive with the installation media on it (`install71.img`), it does not give me the option to boot off of the SSD either (it only lists hd0 which is the USB stick itself). But, if I continue to boot it and press U for `(U)pdate`, it does prompt me about `sd0`. Escaping to a shell and fiddling about, I can tell the USB stick itself is now `sd2`. So everything seems fine once the kernel is booted.
+
+Looking through `boot(8)`, I see we can ask the bootloader to _ask_ where the root partition is. Let's try that! Reboot, at the prompt type `boot -a`. When prompted, tell it `sd0a` for root and `sd0b` for swap. It starts to boot, but hangs after starting `ntpd`. Okay, maybe `/boot.rd` isn't the best image to actually load the operating system (which is the default image for the installation media). 
+
+Let's try with `/bsd`. Reboot, say `boot /bsd -a`, when prompted for the root partition, tell it `sd0a` for root and `sd0b` for swap and... it almost boots correctly. There are no additional vttys (or whatever BSD calls them) installed, so X won't start. Network seems to work. There were a whole lot more devices showing up as "not configured" in `dmesg`, but maybe that's because the kernel on the installation media doesn't have a whole much of anything in it. Maybe the installer configures the kernel it's installing resulting in a kernel that can actually configure all of the devices. 
+
+Since we're now sort-of booted into my usual system, let's hack!
+
+```sh
+mount /dev/sd2a /mnt
+mv /mnt/bsd /mnt/bsd.installer
+cp /bsd /mnt/bsd
+```
+
+Reading about `boot.conf` in the man pages, I see I can specify some things to have a few characters less to type:
+
+```sh
+cat <<EOF > /mnt/etc/boot.conf
+set image /bsd
+set howto -a
+EOF
+```
+
+Now let's get out of here:
+
+```sh
+cd /
+umount /mnt
+reboot
+```
+
+I've searched the whole wide world (wide web) if I can tell the bootloader to have `root on sd0a swap on sd0b dump on sd0b`, but it turns out you can only do that when recompiling the kernel. I'll wait on that since recompiling the kernel on this ancient netbook takes at least two hours. But, now that it's back at the `boot>` prompt, let's hit enter and see what happens.
+
+It reads the new `/etc/boot.conf` and uses the new `/bsd` kernel which we copied over from our SSD, and then asks for the root device: `sd0a`, enter, aaaaand... Yes, we're booted off of the SSD, X is running, I can log in, everything is mounted, and we can remove the USB stick.
+
+So, we are in 2022 and I have a system that effectively needs a boot "floppy". Now, I just need to gather the necessary willpower to recompile the kernel (again) with `conf bsd root on sd0a swap on sd0b dump on sd0b` and I don't have to type `sd0a<CR><CR>` every time I boot now.
+
+The only additional annoyance is that if I hibernate the system, the BIOS knows it was hibernated and disables the boot menu and for some strange reason `lan` (PXE) takes precedence over USB. This means I need to `CTRL+ALT+DEL` out of the failing PXE boot 3 times until it will let me tell it to use the USB. Then, it proceeds to boot asking for root, and then proceeds to detect the hibernation image and load it. And everything is fine afterwards.
+
+Why would I torture myself this way with a boot floppy-actually-usb-drive? I have a feeling that old hard drive will give up the ghost one of these days, while the SSD definitely has a few years' worth of life in it. And I'll have to check the benchmarks, maybe we do get some speed improvements.
+
 ----
 
 Finally, delete those `restoresymtable` files: (I'm feeling courages and using shell expansions as root, woooo!)
@@ -529,6 +582,8 @@ doas fio --name=randrw --iodepth=1 --rw=randrw --bs=4k --direct=0 --size=128MB -
 ```
 
 I'm not good at disk benchmarks, but usually they test sequential and random reads and writes. 4k should be a block (I don't know how to check), `numjobs` is 2 because I have a single hyperthreaded core, `iodepth=1` because I'm not sure if higher depths are supported without `libaio` or if it matters on SATA. Shrugs, at least I ran the same tests on both disks.
+
+Oh, if you run those, it _will_ create files named something like `randrw.0.0` which are 128/512MB. Don't forget to delete them.
 
 Here's a table:
 
