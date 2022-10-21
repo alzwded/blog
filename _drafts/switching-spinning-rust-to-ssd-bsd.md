@@ -502,6 +502,10 @@ And so on.
 
 Let's test the boot. `reboot`, then `boot sd2a:/bsd`
 
+![confirm restoresymtable is there](../../../assets/images/2022-10-23-ssd/restoresymtableAreThereUSBBoot.png)
+
+*(hmmm... when did that core dump get there?)*
+
 ----
 
 Cool. Let's swap the disks IRL...
@@ -553,11 +557,13 @@ I've searched the whole wide world (wide web) if I can tell the bootloader to ha
 
 It reads the new `/etc/boot.conf` and uses the new `/bsd` kernel which we copied over from our SSD, and then asks for the root device: `sd0a`, enter, aaaaand... Yes, we're booted off of the SSD, X is running, I can log in, everything is mounted, and we can remove the USB stick.
 
+I am pleasantly surprised OpenBSD can do this (though I know of an HP-UX "mini" in a particular basement that can only boot off of a very specific floppy, so it's not unheard of in the world of UNXIen). I need to try this on Linux at some point, it probably requires grub and the kernel on the USB fub, which then magically becomes the `/boot` partition or something like that; or maybe grub can already read the SSD at that point?
+
 So, we are in 2022 and I have a system that effectively needs a boot "floppy". Now, I just need to gather the necessary willpower to recompile the kernel (again) with `conf bsd root on sd0a swap on sd0b dump on sd0b` and I don't have to type `sd0a<CR><CR>` every time I boot now.
 
 The only additional annoyance is that if I hibernate the system, the BIOS knows it was hibernated and disables the boot menu and for some strange reason `lan` (PXE) takes precedence over USB. This means I need to `CTRL+ALT+DEL` out of the failing PXE boot 3 times until it will let me tell it to use the USB. Then, it proceeds to boot asking for root, and then proceeds to detect the hibernation image and load it. And everything is fine afterwards.
 
-Why would I torture myself this way with a boot floppy-actually-usb-drive? I have a feeling that old hard drive will give up the ghost one of these days, while the SSD definitely has a few years' worth of life in it. And I'll have to check the benchmarks, maybe we do get some speed improvements.
+Why would I torture myself this way with a boot floppy-actually-usb-drive? I have a feeling that old hard drive will give up the ghost one of these days, while the SSD definitely has a few years' worth of life in it. And I'll have to check the benchmarks, maybe we do get some speed improvements (more foreshadowing!).
 
 ----
 
@@ -566,6 +572,8 @@ Finally, delete those `restoresymtable` files: (I'm feeling courages and using s
 ```
 doas rm -f {/,/var/,/home/,/usr/,/usr/X11R6/,/usr/local/,/usr/obj/,/usr/src/}restoresymtable
 ```
+
+![manually deleting them because I was too lazy to type that command](../../../assets/images/2022-10-23-ssd/restoresymtableAreThere.png)
 
 
 
@@ -589,8 +597,12 @@ Here's a table:
 
 | Disk            | Sequential read | sequential write  | random read   | random rw                     |
 |:---------------:|-----------------|-------------------|---------------|-------------------------------|
-| **spinny disk** | 10.3 MB/s       | 30.3 MB/s         | 483 KB/s      | 257-479 KB/s read, 280-482 KB/s write |
-| **ssd**		  |					|					|				|                               |
+| **spinny disk** | 10.3 MB/s       | 30.3 MB/s  (?)    | 483 KB/s      | 257-479 KB/s read, 280-482 KB/s write |
+| **ssd**         | 73.0 MB/s       | 55.5 MB/s         | 45 MB/s       | 13.4 MB/s read, 13.5 MBs write|
+
+Sequential write on the spinny disk is a bit weird. In general, writes seem to have gone quicker. I didn't have any notable processes running, and repeating the test gave consistently better write results. Maybe the disk was just getting old?
+
+Overall, moving to SSD was a net upgrade. Well, if you disregard the fact that I need a USB boot key and system upgrades have a couple of more steps to it. The main reason I wanted to replace the old disk was to know that I can (the old disk was at least 13 years old, which was waaaay past its intended life time) and because I wanted to preemptively do so before it died. The speed boost is a bonus, the convoluted boot process is a malus. But hey, at least now doing full disk encryption wouldn't be an annoyance since I need the boot stick anyway, amirite? :smile:
 
 ### Before
 
@@ -806,3 +818,159 @@ Run status group 0 (all jobs):
 ### After
 
 Here's the after (with the SSD installed):
+
+#### Sequential read
+
+```
+read: (g=0): rw=read, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+...
+fio-3.26
+Starting 2 threads
+read: Laying out IO file (1 file / 512MiB)
+read: Laying out IO file (1 file / 512MiB)
+Jobs: 2 (f=2): [R(2)][93.3%][r=72.2MiB/s][r=18.5k IOPS][eta 00m:01s]
+read: (groupid=0, jobs=2): err= 0: pid=1106000428: Fri Oct 21 20:59:33 2022
+  read: IOPS=18.7k, BW=73.0MiB/s (76.6MB/s)(1024MiB/14021msec)
+    clat (usec): min=21, max=11117, avg=68.93, stdev=103.54
+     lat (usec): min=27, max=11125, avg=76.69, stdev=104.33
+    clat percentiles (usec):
+     |  1.00th=[   27],  5.00th=[   31], 10.00th=[   32], 20.00th=[   33],
+     | 30.00th=[   33], 40.00th=[   34], 50.00th=[   36], 60.00th=[   38],
+     | 70.00th=[   40], 80.00th=[   45], 90.00th=[  219], 95.00th=[  326],
+     | 99.00th=[  392], 99.50th=[  416], 99.90th=[  474], 99.95th=[  586],
+     | 99.99th=[ 2212]
+   bw (  KiB/s): min=70350, max=76199, per=100.00%, avg=74897.37, stdev=639.32, samples=54
+   iops        : min=17587, max=19049, avg=18723.52, stdev=159.83, samples=54
+  lat (usec)   : 50=84.54%, 100=3.03%, 250=3.62%, 500=8.73%, 750=0.04%
+  lat (usec)   : 1000=0.01%
+  lat (msec)   : 2=0.01%, 4=0.01%, 10=0.01%, 20=0.01%
+  cpu          : usr=22.91%, sys=62.56%, ctx=23754, majf=8, minf=1
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=262144,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+   READ: bw=73.0MiB/s (76.6MB/s), 73.0MiB/s-73.0MiB/s (76.6MB/s-76.6MB/s), io=1024MiB (1074MB), run=14021-14021msec
+```
+
+#### Sequential write
+
+```
+write: (g=0): rw=write, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+...
+fio-3.26
+Starting 2 threads
+write: Laying out IO file (1 file / 512MiB)
+write: Laying out IO file (1 file / 512MiB)
+Jobs: 2 (f=2): [W(2)][100.0%][w=54.6MiB/s][w=14.0k IOPS][eta 00m:00s]
+write: (groupid=0, jobs=2): err= 0: pid=1294197548: Fri Oct 21 21:01:30 2022
+  write: IOPS=14.2k, BW=55.5MiB/s (58.2MB/s)(1024MiB/18445msec); 0 zone resets
+    clat (usec): min=30, max=32031, avg=90.73, stdev=115.00
+     lat (usec): min=37, max=32039, avg=106.75, stdev=117.14
+    clat percentiles (usec):
+     |  1.00th=[   41],  5.00th=[   46], 10.00th=[   47], 20.00th=[   48],
+     | 30.00th=[   60], 40.00th=[   72], 50.00th=[   77], 60.00th=[   82],
+     | 70.00th=[  114], 80.00th=[  135], 90.00th=[  143], 95.00th=[  163],
+     | 99.00th=[  210], 99.50th=[  219], 99.90th=[  351], 99.95th=[  449],
+     | 99.99th=[ 2024]
+   bw (  KiB/s): min=54183, max=61626, per=100.00%, avg=56890.61, stdev=658.86, samples=72
+   iops        : min=13545, max=15406, avg=14222.39, stdev=164.67, samples=72
+  lat (usec)   : 50=26.15%, 100=37.23%, 250=36.33%, 500=0.24%, 750=0.02%
+  lat (usec)   : 1000=0.01%
+  lat (msec)   : 2=0.01%, 4=0.01%, 10=0.01%, 50=0.01%
+  cpu          : usr=20.15%, sys=69.26%, ctx=1512, majf=0, minf=1
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=0,262144,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+  WRITE: bw=55.5MiB/s (58.2MB/s), 55.5MiB/s-55.5MiB/s (58.2MB/s-58.2MB/s), io=1024MiB (1074MB), run=18445-18445msec
+```
+
+### Random read
+
+```
+randread: (g=0): rw=randread, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+...
+fio-3.26
+Starting 2 threads
+randread: Laying out IO file (1 file / 128MiB)
+Jobs: 1 (f=1): [r(1),_(1)][85.7%][r=32.1MiB/s][r=8212 IOPS][eta 00m:01s]
+randread: (groupid=0, jobs=2): err= 0: pid=1068637740: Fri Oct 21 21:02:49 2022
+  read: IOPS=11.7k, BW=45.8MiB/s (48.0MB/s)(256MiB/5593msec)
+    clat (usec): min=21, max=14297, avg=94.65, stdev=125.13
+     lat (usec): min=27, max=14307, avg=101.70, stdev=125.32
+    clat percentiles (usec):
+     |  1.00th=[   25],  5.00th=[   26], 10.00th=[   28], 20.00th=[   34],
+     | 30.00th=[   34], 40.00th=[   35], 50.00th=[   38], 60.00th=[   41],
+     | 70.00th=[   51], 80.00th=[  122], 90.00th=[  302], 95.00th=[  326],
+     | 99.00th=[  388], 99.50th=[  412], 99.90th=[  469], 99.95th=[  498],
+     | 99.99th=[  922]
+   bw (  KiB/s): min=45163, max=89291, per=100.00%, avg=63953.70, stdev=7830.61, samples=16
+   iops        : min=11290, max=22322, avg=15987.70, stdev=1957.58, samples=16
+  lat (usec)   : 50=69.85%, 100=9.02%, 250=1.34%, 500=19.75%, 750=0.03%
+  lat (usec)   : 1000=0.01%
+  lat (msec)   : 2=0.01%, 20=0.01%
+  cpu          : usr=18.56%, sys=50.41%, ctx=13163, majf=0, minf=2
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=65536,0,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+   READ: bw=45.8MiB/s (48.0MB/s), 45.8MiB/s-45.8MiB/s (48.0MB/s-48.0MB/s), io=256MiB (268MB), run=5593-5593msec
+```
+
+#### Random read & write
+
+```
+randrw: (g=0): rw=randrw, bs=(R) 4096B-4096B, (W) 4096B-4096B, (T) 4096B-4096B, ioengine=psync, iodepth=1
+...
+fio-3.26
+Starting 2 threads
+randrw: Laying out IO file (1 file / 128MiB)
+randrw: Laying out IO file (1 file / 128MiB)
+Jobs: 2 (f=2): [m(2)][21.4%][r=10.8MiB/s,w=11.0MiB/s][r=2771,w=2826 IOPS][eta 00Jobs: 2 (f=2): [m(2)][30.8%][r=12.2MiB/s,w=12.4MiB/s][r=3128,w=3179 IOPS][eta 00Jobs: 2 (f=2): [m(2)][38.5%][r=13.6MiB/s,w=13.2MiB/s][r=3493,w=3385 IOPS][eta 00Jobs: 2 (f=2): [m(2)][50.0%][r=13.4MiB/s,w=13.4MiB/s][r=3429,w=3418 IOPS][eta 00Jobs: 2 (f=2): [m(2)][58.3%][r=14.5MiB/s,w=14.7MiB/s][r=3712,w=3752 IOPS][eta 00Jobs: 2 (f=2): [m(2)][66.7%][r=16.1MiB/s,w=16.3MiB/s][r=4122,w=4184 IOPS][eta 00Jobs: 2 (f=2): [m(2)][81.8%][r=15.1MiB/s,w=14.8MiB/s][r=3873,w=3797 IOPS][eta 00Jobs: 1 (f=1): [m(1),_(1)][90.9%][r=11.8MiB/s,w=11.5MiB/s][r=3009,w=2951 IOPS][eta 00m:01s]
+randrw: (groupid=0, jobs=2): err= 0: pid=1813041708: Fri Oct 21 21:03:40 2022
+  read: IOPS=3435, BW=13.4MiB/s (14.1MB/s)(128MiB/9512msec)
+    clat (usec): min=22, max=50779, avg=218.19, stdev=753.90
+     lat (usec): min=28, max=50787, avg=225.66, stdev=754.69
+    clat percentiles (usec):
+     |  1.00th=[   26],  5.00th=[   28], 10.00th=[   34], 20.00th=[   36],
+     | 30.00th=[   38], 40.00th=[   42], 50.00th=[   62], 60.00th=[  120],
+     | 70.00th=[  330], 80.00th=[  355], 90.00th=[  404], 95.00th=[  453],
+     | 99.00th=[  824], 99.50th=[ 4883], 99.90th=[ 6063], 99.95th=[ 6521],
+     | 99.99th=[36439]
+   bw (  KiB/s): min=10997, max=20919, per=100.00%, avg=14616.86, stdev=1501.32, samples=33
+   iops        : min= 2749, max= 5229, avg=3653.57, stdev=375.28, samples=33
+  write: IOPS=3453, BW=13.5MiB/s (14.1MB/s)(128MiB/9512msec); 0 zone resets
+    clat (usec): min=26, max=50212, avg=237.08, stdev=762.37
+     lat (usec): min=34, max=50218, avg=245.18, stdev=762.59
+    clat percentiles (usec):
+     |  1.00th=[   37],  5.00th=[   43], 10.00th=[   48], 20.00th=[   51],
+     | 30.00th=[   61], 40.00th=[   71], 50.00th=[   87], 60.00th=[  141],
+     | 70.00th=[  343], 80.00th=[  367], 90.00th=[  420], 95.00th=[  474],
+     | 99.00th=[  832], 99.50th=[ 4883], 99.90th=[ 5997], 99.95th=[ 7504],
+     | 99.99th=[34341]
+   bw (  KiB/s): min=10824, max=21233, per=100.00%, avg=14714.54, stdev=1499.95, samples=33
+   iops        : min= 2705, max= 5308, avg=3677.98, stdev=375.05, samples=33
+  lat (usec)   : 50=31.70%, 100=24.08%, 250=6.15%, 500=34.35%, 750=2.21%
+  lat (usec)   : 1000=0.76%
+  lat (msec)   : 2=0.06%, 4=0.09%, 10=0.57%, 20=0.01%, 50=0.02%
+  lat (msec)   : 100=0.01%
+  cpu          : usr=11.15%, sys=35.93%, ctx=25241, majf=0, minf=2
+  IO depths    : 1=100.0%, 2=0.0%, 4=0.0%, 8=0.0%, 16=0.0%, 32=0.0%, >=64=0.0%
+     submit    : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     complete  : 0=0.0%, 4=100.0%, 8=0.0%, 16=0.0%, 32=0.0%, 64=0.0%, >=64=0.0%
+     issued rwts: total=32682,32854,0,0 short=0,0,0,0 dropped=0,0,0,0
+     latency   : target=0, window=0, percentile=100.00%, depth=1
+
+Run status group 0 (all jobs):
+   READ: bw=13.4MiB/s (14.1MB/s), 13.4MiB/s-13.4MiB/s (14.1MB/s-14.1MB/s), io=128MiB (134MB), run=9512-9512msec
+  WRITE: bw=13.5MiB/s (14.1MB/s), 13.5MiB/s-13.5MiB/s (14.1MB/s-14.1MB/s), io=128MiB (135MB), run=9512-9512msec
+```
