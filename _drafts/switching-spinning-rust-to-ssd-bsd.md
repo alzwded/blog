@@ -2,15 +2,42 @@
 title: "Replacing spinning rust with a brand new SSD in my OpenBSD Laptop. Or, how to get your modern PC to require a boot floppy to boot"
 layout: post
 ---
-I have restarted my OpenBSD journey about a month ago mostly to try out writing software with `pledge(2)` and `unveil(2)`. It's actually the second time I have an OpenBSD system, but the last time I was too young to appreciate it. I especially like how straight forward is to get started after [having difficulties](https://www.openbsd.org/errata71.html) [getting wifi to work](https://man.openbsd.org/fw_update) and exFAT being not shipped by default and VFAT sticks being a thing of the past... But once I got all the firmware blobs and kernel rebuilt, it was really straight forward.
+I have restarted my OpenBSD journey about a month ago mostly to try out writing
+software with `pledge(2)` and `unveil(2)`. It's actually the second time I have
+an OpenBSD system, but the last time I was too young to appreciate it. I
+especially like how straight forward is to get started after
+[having difficulties](https://www.openbsd.org/errata71.html)
+[getting wifi to work](https://man.openbsd.org/fw_update)
+and exFAT being not shipped by default and VFAT sticks being a thing of the
+past... But once I got all the firmware blobs and kernel rebuilt, it was really
+straight forward.
 
-I decided to try to ressurrect my old netbook, which is [this thing](https://il.dynabook.com/en/discontinued-products/toshiba-nb250-101/) (I'd give you the output of `pcidump -v`, but currently that panics the kernel; I suspect it's because a particular Intel controller does a bunch of stuff, and a couple of them are *not configured*, and the kernel function to dump all of them involves some address mappings which probably fail for the *not configured* ones). The funny thing is that they used to ship a 32bit OS on a 64bit system to get it to "run better" and use less memory. Sticking with the theme, yes, I have the i386 build of OpenBSD.
+I decided to try to ressurrect my old netbook, which is
+[this thing](https://il.dynabook.com/en/discontinued-products/toshiba-nb250-101/)
+(I'd give you the output of `pcidump -v`, but currently that panics the kernel;
+I suspect it's because a particular Intel controller does a bunch of stuff, and
+a couple of them are *not configured*, and the kernel function to dump all of
+them involves some address mappings which probably fail for the *not
+configured* ones). The funny thing is that they used to ship a 32bit OS on a
+64bit system to get it to "run better" and use less memory. Sticking with the
+theme, yes, I have the i386 build of OpenBSD.
 
-The reason that laptop was retired was mostly because the battery died, and because it was slow and barely a functional computer when it was brand spanking new in 2009. Anyway, I have since acquired quite a collection of laptops and desktops, so I don't need to depend on it for speed, power or battery life.
+The reason that laptop was retired was mostly because the battery died, and
+because it was slow and barely a functional computer when it was brand spanking
+new in 2009. Anyway, I have since acquired quite a collection of laptops and
+desktops, so I don't need to depend on it for speed, power or battery life.
 
-I've since found a new battery, which, compared to the specs, actually gives me a couple of hours extra battery life. Next would be swapping out the hard drive, since these things fail over time. The CPU doesn't seem to overheat at all, so I don't feel like re-thermal pasting it. The fan could probably use some cleaning, but it looks like I have to take the whole danged thing appart to get to it, and that's a problem for future me.
+I've since found a new battery, which, compared to the specs, actually gives me
+a couple of hours extra battery life. Next would be swapping out the hard
+drive, since these things fail over time. The CPU doesn't seem to overheat at
+all, so I don't feel like re-thermal pasting it. The fan could probably use
+some cleaning, but it looks like I have to take the whole danged thing appart
+to get to it, and that's a problem for future me.
 
-Today, let's focus on replacing the hard drive with a brand new modern SSD. I like SSDs in laptop because it reduces the amount of moving parts. It's a bit of a side-grade (foreshadowing...), since we'll be switching from 160GB to 120GB.
+Today, let's focus on replacing the hard drive with a brand new modern SSD. I
+like SSDs in laptop because it reduces the amount of moving parts. It's a bit
+of a side-grade (foreshadowing...), since we'll be switching from 160GB to
+120GB.
 
 The list of things we need to do today:
 
@@ -27,6 +54,8 @@ The list of things we need to do today:
 ## 1. Acquire a SATA-to-USB adapter.
 
 I got a "Spacer USB 3.0 laptop External HDD Rack", which included a case to put a disk with its adapter into, and a pretty sweet faux leather case(?) to put it in. I was only interested in the SATA adapter, but this was at the sweet spot between "cheap" and "good reviews" over on the local market.
+
+![sata-to-usb](../../../assets/images/2022-10-23-ssd/satausbdevice.JPG)
 
 Done!
 
@@ -295,128 +324,7 @@ foreach d ( sd2{a,d,e,f,g,h,i,j,k} )
 end
 ```
 
-Or, the slow way:
-
-```
-/# newfs sd2a
-/dev/rsd2a: 1024.0MB in 2097152 sectors of 512 bytes
-6 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760,
-/# newfs sd2d
-/dev/rsd2d: 4096.0MB in 8388544 sectors of 512 bytes
-21 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
- 3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
- 7050400, 7465120, 7879840, 8294560,
-/# newfs sd2e
-/dev/rsd2e: 4096.0MB in 8388608 sectors of 512 bytes
-21 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
- 3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
- 7050400, 7465120, 7879840, 8294560,
-/# newfs sd2f
-/dev/rsd2f: 6144.0MB in 12582912 sectors of 512 bytes
-31 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
- 3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
- 7050400, 7465120, 7879840, 8294560, 8709280, 9124000, 9538720, 9953440,
- 10368160, 10782880, 11197600, 11612320, 12027040, 12441760,
-/# newfs sd2g
-/dev/rsd2g: 1024.0MB in 2097152 sectors of 512 bytes
-6 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760,
-/# newfs sd2h
-/dev/rsd2h: 16384.0MB in 33554432 sectors of 512 bytes
-81 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
- 3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
- 7050400, 7465120, 7879840, 8294560, 8709280, 9124000, 9538720, 9953440,
- 10368160, 10782880, 11197600, 11612320, 12027040, 12441760, 12856480,
- 13271200, 13685920, 14100640, 14515360, 14930080, 15344800, 15759520,
- 16174240, 16588960, 17003680, 17418400, 17833120, 18247840, 18662560,
- 19077280, 19492000, 19906720, 20321440, 20736160, 21150880, 21565600,
- 21980320, 22395040, 22809760, 23224480, 23639200, 24053920, 24468640,
- 24883360, 25298080, 25712800, 26127520, 26542240, 26956960, 27371680,
- 27786400, 28201120, 28615840, 29030560, 29445280, 29860000, 30274720,
- 30689440, 31104160, 31518880, 31933600, 32348320, 32763040, 33177760,
-/# newfs sd2i
-/dev/rsd2i: 3072.0MB in 6291456 sectors of 512 bytes
-16 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
- 3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960,
-/# newfs sd2j
-/dev/rsd2j: 6144.0MB in 12582912 sectors of 512 bytes
-31 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
- 3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
- 7050400, 7465120, 7879840, 8294560, 8709280, 9124000, 9538720, 9953440,
- 10368160, 10782880, 11197600, 11612320, 12027040, 12441760,
-/# newfs sd2k
-/dev/rsd2k: 71220.1MB in 145858816 sectors of 512 bytes
-352 cylinder groups of 202.50MB, 12960 blocks, 25920 inodes each
-super-block backups (for fsck -b #) at:
- 160, 414880, 829600, 1244320, 1659040, 2073760, 2488480, 2903200, 3317920,
- 3732640, 4147360, 4562080, 4976800, 5391520, 5806240, 6220960, 6635680,
- 7050400, 7465120, 7879840, 8294560, 8709280, 9124000, 9538720, 9953440,
- 10368160, 10782880, 11197600, 11612320, 12027040, 12441760, 12856480,
- 13271200, 13685920, 14100640, 14515360, 14930080, 15344800, 15759520,
- 16174240, 16588960, 17003680, 17418400, 17833120, 18247840, 18662560,
- 19077280, 19492000, 19906720, 20321440, 20736160, 21150880, 21565600,
- 21980320, 22395040, 22809760, 23224480, 23639200, 24053920, 24468640,
- 24883360, 25298080, 25712800, 26127520, 26542240, 26956960, 27371680,
- 27786400, 28201120, 28615840, 29030560, 29445280, 29860000, 30274720,
- 30689440, 31104160, 31518880, 3193300, 32348320, 32763040, 33177760,
- 33592480, 34007200, 34421920, 34836640, 35251360, 35666080, 36080800,
- 36495520, 36910240, 37324960, 37739680, 38154400, 38569120, 38983840,
- 39398560, 39813280, 40228000, 40642720, 41057440, 41472160, 41886880,
- 42301600, 42716320, 43131040, 43545760, 43960480, 44375200, 44789920,
- 45204640, 45619360, 46034080, 46448800, 46863520, 47278240, 47692960,
- 48107680, 48522400, 48937120, 49351840, 49766560, 50181280, 50596000,
- 51010720, 51425440, 51840160, 52254880, 52669600, 53084320, 53499040,
- 53913760, 54328480, 54743200, 55157920, 55572640, 55987360, 56402080,
- 56816800, 57231520, 57646240, 58060960, 58475680, 58890400, 59305120,
- 59719840, 60134560, 60549280, 60964000, 61378720, 61793440, 62208160,
- 62622880, 63037600, 63452320, 63867040, 64281760, 64696480, 65111200,
- 65525920, 65940640, 66355360, 66770080, 67184800, 67599520, 68014240,
- 68428960, 68843680, 69258400, 69673120, 70087840, 70502560, 70917280,
- 71332000, 71746720, 72161440, 72576160, 72990880, 73405600, 73820320,
- 74235040, 74649760, 75064480, 75479200, 75893920, 76308640, 76723360,
- 77138080, 77552800, 77967520, 78382240, 78796960, 79211680, 79626400,
- 80041120, 80455840, 80870560, 81285280, 81700000, 82114720, 82529440,
- 82944160, 83358880, 83773600, 84188320, 84603040, 85017760, 85432480,
- 85847200, 86261920, 86676640, 87091360, 87506080, 87920800, 88335520,
- 88750240, 89164960, 89579680, 89994400, 90409120, 90823840, 91238560,
- 91653280, 92068000, 92482720, 92897440, 93312160, 93726880, 94141600,
- 94556320, 94971040, 95385760, 95800480, 96215200, 96629920, 97044640,
- 97459360, 97874080, 98288800, 98703520, 99118240, 99532960, 99947680,
- 100362400, 100777120, 101191840, 101606560, 102021280, 102436000, 102850720,
- 103265440, 103680160, 104094880, 104509600, 104924320, 105339040, 105753760,
- 106168480, 106583200, 106997920, 107412640, 107827360, 108242080, 108656800,
- 109071520, 109486240, 109900960, 110315680, 110730400, 111145120, 111559840,
- 111974560, 112389280, 112804000, 113218720, 113633440, 114048160, 114462880,
- 114877600, 115292320, 115707040, 116121760, 116536480, 116951200, 117365920,
- 117780640, 118195360, 118610080, 119024800, 119439520, 119854240, 120268960,
- 120683680, 121098400, 121513120, 121927840, 122342560, 122757280, 123172000,
- 123586720, 124001440, 124416160, 124830880, 125245600, 125660320, 126075040,
- 126489760, 126904480, 127319200, 127733920, 128148640, 128563360, 128978080,
- 129392800, 129807520, 130222240, 130636960, 131051680, 131466400, 131881120,
- 132295840, 132710560, 133125280, 133540000, 133954720, 134369440, 134784160,
- 135198880, 135613600, 136028320, 136443040, 136857760, 137272480, 137687200,
- 138101920, 138516640, 138931360, 139346080, 139760800, 140175520, 140590240,
- 141004960, 141419680, 141834400, 142249120, 142663840, 143078560, 143493280,
- 143908000, 144322720, 144737440, 145152160, 145566880
-```
-
 Let's test a partition, because why not:
-
 
 ```
 jakkal# mount /dev/sd2a /mnt
@@ -487,11 +395,18 @@ Filesystem     Size    Used   Avail Capacity  Mounted on
   DUMP: DUMP IS DONE
 ```
 
-The OpenBSD internet sources recommend `dump(8)` and `tar(1)`. `dump` works on the raw device (e.g. `/dev/rsd0a`) which will allow us to skip mounting some things once we get to copying everything. `cp` won't work because you can't tell it to stay on just one filesystem nor to exclude files, which complicates things.
+The OpenBSD internet sources recommend `dump(8)` and `tar(1)`. `dump` works on
+the raw device (e.g. `/dev/rsd0a`) which will allow us to skip mounting some
+things once we get to copying everything. `cp` won't work because you can't
+tell it to stay on just one filesystem nor to exclude files, which complicates
+things.
 
 `dump` creates a restoresymtable which is used for incremental restores;
--0 effectively means full back each higher level means "backup everything since the last backup of a lower level",
-so you would restore backup level 0 and continue with 1, 2... up to how many levels your backup policy has. But that's besides the point, I'm only using it to copy paste the file systems one time.
+-0 effectively means full back each higher level means "backup everything since
+the last backup of a lower level",
+so you would restore backup level 0 and continue with 1, 2... up to how many
+levels your backup policy has. But that's besides the point, I'm only using it
+to copy paste the file systems one time.
 
 ```
 /mnt# ls -lh restoresymtable 
@@ -527,6 +442,8 @@ Before we go any further, we need a read-write `/tmp`. Slice `sd0d` will not get
 mount /tmp
 ```
 
+![need-writeable-tmp](../../../assets/images/2022-10-23-ssd/mount-tmp-dump.JPG)
+
 If you had a single `/`, you would have to use `mount_mfs(8)` to get a ramdisk on `/tmp` (if you hadn't done that already, in which case `mount /tmp`).
 
 Start with `/` to get it out of the way, since it has an annoying extra step:
@@ -554,6 +471,8 @@ know `ed`.
 %n
 wq
 ```
+
+![ed-to-edit-fstab](../../../assets/images/2022-10-23-ssd/ed-edit-fstab.JPG)
 
 `%` means "address all lines" (like `vi`), `s///` means replace (like `sed` and `vi`),
 `n` means "print with line numbers" (like `ex(1)`; there's also the basic `p` for print, but
@@ -586,6 +505,8 @@ It's important to be in `/mnt` *before* running `restore`, `restore` will dump s
 
 Oh, and if you've *split* partitions, then make sure all the target slices are *moutned* before running `restore`, so that data ends up in the correct place.
 
+![the home partition took a while to copy](../../../assets/images/2022-10-23-ssd/panoramicb.JPG)
+
 ## 5. Test new disk has all the data for it to boot to the same desktop you know and love
 
 Let's test the boot. `reboot`, then `boot sd2a:/bsd`
@@ -614,15 +535,26 @@ Another round of boot tests; this time, we need to kindly ask our BIOS to boot o
 
 Cool. Let's swap the disks IRL...
 
-Looking at the bottom of the laptop, it looks like there are a couple of Torx screws to get out of the way (because I have to justify having bought a couple of sets of Torx heads over the years), and the maintenance manual confirms this. The maintenance manual also says to *"carefully remove the Hard Drive cover as shown in the figure"* but it doesn't actually show how. If you have such a laptop and you don't want to break the cover (which includes shielding), you're supposed to remove if inward-to-outward (pull up from the VGA port side) while gently pulling it towards the longer edge (that frees up the last tab on the shorter edge), and then you can pull it out towards the VGA port side.
+Looking at the bottom of the laptop, it looks like there are a couple of Torx
+screws to get out of the way (because I have to justify having bought a couple
+of sets of Torx heads over the years), and the maintenance manual confirms
+this. The maintenance manual also says to *"carefully remove the Hard Drive
+cover as shown in the figure"* but it doesn't actually show how. If you have
+such a laptop and you don't want to break the cover (which includes shielding),
+you're supposed to remove if inward-to-outward (pull up from the VGA port side)
+while gently pulling it towards the longer edge (that frees up the last tab on
+the shorter edge), and then you can pull it out towards the VGA port side.
 
-The old disk just slides out *(fun fact -- the maintenance manual mentioned every other paragraph to not press down on the "middle of the hard drive" to not damage the platter or head)*. It's in some sort of caddy, imprisoned by 4 philips head screws. Those come right out, SSD goes in, SSD slides in, cover is reinstalled, we should be good to go.
+![screws-to-unscrew](../../../assets/images/2022-10-23-ssd/swap1.JPG)
 
-```
-reboot
-```
+The old disk just slides out *(fun fact -- the maintenance manual mentioned
+every other paragraph to not press down on the "middle of the hard drive" to
+not damage the platter or head)*. It's in some sort of caddy, imprisoned by 4
+philips head screws. Those come right out, SSD goes in, SSD slides in, cover is
+reinstalled, we should be good to go.
 
-TODO integrate pictures and whatnot
+![old-disk-out](../../../assets/images/2022-10-23-ssd/swap2.JPG)
+![new-disk-in](../../../assets/images/2022-10-23-ssd/swap3.JPG)
 
 ## 8. Boot from the new disk for real and benchmark the new disk
 
@@ -675,8 +607,6 @@ The only additional annoyance is that if I hibernate the system, the BIOS knows 
 
 Why would I torture myself this way with a boot floppy-actually-usb-drive? I have a feeling that old hard drive will give up the ghost one of these days, while the SSD definitely has a few years' worth of life in it. And I'll have to check the benchmarks, maybe we do get some speed improvements (more foreshadowing!).
 
-----
-
 Finally, delete those `restoresymtable` files: (I'm feeling courages and using shell expansions as root, woooo!)
 
 ```
@@ -686,7 +616,6 @@ doas rm -f {/,/var/,/home/,/usr/,/usr/X11R6/,/usr/local/,/usr/obj/,/usr/src/}res
 ![me manually deleting them because I was too lazy to type that command](../../../assets/images/2022-10-23-ssd/restoresymtableAreThere.png)
 
 ## 9. Benchmarks?
------------------
 
 Now that I can proudly boot my system again, albeit with a few extra steps, a magic incantation and by sacrificing a goat, let's see what I've gained, if anything.
 
@@ -708,7 +637,7 @@ Here's a table:
 | Disk            | Sequential read | sequential write  | random read   | random rw                     |
 |:---------------:|-----------------|-------------------|---------------|-------------------------------|
 | **spinny disk** | 10.3 MB/s       | 30.3 MB/s  (?)    | 483 KB/s      | 257-479 KB/s read, 280-482 KB/s write |
-| **ssd**         | 73.0 MB/s       | 55.5 MB/s         | 45 MB/s       | 13.4 MB/s read, 13.5 MBs write|
+| **ssd**         | 73.0 MB/s       | 55.5 MB/s         | 45 MB/s       | 13.4 MB/s read, 13.5 MB/s write|
 
 *Note: Sequential write on the spinny disk is a bit weird. In general, writes seem to have gone quicker. I didn't have any notable processes running, and repeating the test gave consistently better write results. Maybe the disk was just getting old?*
 
