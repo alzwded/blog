@@ -24,9 +24,9 @@ Aside the usual `afterboot(8)` stuff, picking my desktop background, getting glo
 Here's stuff that I've been busy with:
 
 - learning to rebuild the kernel (though I'm back on `GENERIC.MP` as of 7.2)
-- learning how to build ports and getting a version of `curl(1)` that works with `sftp://`
+- learning how to build ports and getting a version of `curl(1)` that works with `sftp://` because I have a script that relies on it
 - gaining the ability to build ports without being root
-- getting a battery indicator in the panel
+- getting a battery indicator in the panel *(there may be a follow up post on this)*
   + debugging fbpanel to figure out why its battery indicator plugin isn't there
   + writing a C program to read the battery state
 - debugging TCSH and figuring out why it insists on building without unicode, and finally getting a good static tcsh in `/bin/tcsh`
@@ -35,3 +35,6 @@ Here's stuff that I've been busy with:
 - setting up `mutt` for the first time since uni, because OpenBSD folks prefer old school text mail
 - discovering that you're supposed to preserve the contents of `argv` in C programs, because the [`kvm_getargv(3)` man page kinda hints at it?](https://man.openbsd.org/kvm_getprocs.3); this, after going through `ps(1)`'s source code to understand why it wasn't printing the same command line I had started the program with
 - discovering that rc daemon scripts invoke `ps -xf` to match the exact command line, and how rc fails to work properly if `ps` fails
+- trying out the `netsurf` port and noticing it doesn't work well (javascript crashes in the X version, the FB version crashes even without javascript); maybe I'll debug this as well, since that browser reminds me of the old [K-Meleon](http://kmeleonbrowser.org/), which I was rocking back in 2011 on a then 7yo laptop
+
+So basically OpenBSD runs perfectly fine on old 32bit intel hardware, and there's a lot of stuff to do which would benefit the (or some?) community, and I find it cozy that things in the OpenBSD world tend to stay consistent for many years. On that last point, I've lost track of how to do certain sysadmin things on Linux, sometimes it feels *"they"* are doing seemingly random changes just to mess with their users. And honestly, I can't wait for the day systemd will gain the ability to read mail -- hopefully, I'll be more cosy over here in OpenBSD land.
