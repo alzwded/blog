@@ -1,5 +1,5 @@
 ---
-layout: pose
+layout: post
 title: "feh cheatsheet"
 ---
 
