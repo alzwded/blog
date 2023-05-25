@@ -527,6 +527,17 @@ We're not quite done with the disk yet, it has no boot loader. We need to use `i
 installboot sd2
 ```
 
+*Update: the above command should be:*
+
+```sh
+mount /dev/sd1a /mnt
+installboot -v -r /mnt sd1 /usr/mdec/biosboot /usr/mdec/boot
+```
+
+*(Update): -r tells where to install ${ROOT}/boot, but also where to look up mdec/bios, which is why we specify them explicitly*
+
+*(Update): this documentation isn't readily available and the diagnostic message is "file not found", which is why I'm mentioning it here*
+
 If you want to know more about the 3 (or more if not on PC?) stages of booting, refer to the man pages.
 
 Another round of boot tests; this time, we need to kindly ask our BIOS to boot off of USB. Spoilers: it works fine.
